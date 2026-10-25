@@ -1,0 +1,239 @@
+import Image from "next/image";
+import { BoxBuilder } from "@/components/box-builder";
+import { SiteFooter, SocialLinks } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
+import { getLandingData } from "@/lib/catalog";
+import { formatRub, spoonsLabel } from "@/lib/pricing";
+
+export const dynamic = "force-dynamic";
+
+function SectionTitle({ eyebrow, title, children }: { eyebrow: string; title: string; children?: React.ReactNode }) {
+  return (
+    <div className="mb-8 max-w-2xl">
+      <p className="text-sm font-extrabold uppercase tracking-widest text-pink-deep">{eyebrow}</p>
+      <h2 className="mt-1 text-3xl font-black leading-tight sm:text-4xl">{title}</h2>
+      {children && <p className="mt-3 text-lg leading-relaxed text-ink-soft">{children}</p>}
+    </div>
+  );
+}
+
+export default async function Home() {
+  const { settings, products, reviews, faq, delivery } = await getLandingData();
+  const available = products.filter((p) => p.available);
+  const minPrice = Math.min(...settings.tiers.map((t) => t.price));
+
+  return (
+    // Bottom padding on phones leaves room for the builder's fixed price bar.
+    <div className="pb-20 lg:pb-0">
+      <SiteHeader showReviews={reviews.length > 0} />
+      <main>
+        {/* Hero */}
+        <section className="dotted-bg relative overflow-hidden">
+          <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 pb-14 pt-10 md:grid-cols-[1.1fr_1fr] md:pb-20 md:pt-16">
+            <div>
+              <p className="inline-flex items-center gap-2 rounded-full border-2 border-ink bg-white px-4 py-1.5 text-sm font-extrabold">
+                <span aria-hidden>🎀</span> Sanrio · Chiikawa
+              </p>
+              <h1 className="mt-5 text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+                {settings.heroTitle}
+              </h1>
+              <p className="mt-5 max-w-xl text-lg leading-relaxed text-ink-soft sm:text-xl">
+                {settings.heroSubtitle.replace("{items}", String(settings.avgItems))}
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-4">
+                <a
+                  href="#builder"
+                  className="rounded-full border-2 border-ink bg-pink-deep px-7 py-4 text-lg font-black text-white shadow-pop transition active:translate-y-1 active:shadow-none"
+                >
+                  Собрать бокс
+                </a>
+                <p className="font-bold text-ink-soft">
+                  от <span className="text-2xl font-black text-ink">{formatRub(minPrice)}</span>
+                </p>
+              </div>
+              <ul className="mt-8 flex flex-wrap gap-2 text-sm font-bold">
+                {settings.tiers.map((t) => (
+                  <li key={t.spoons} className="rounded-full bg-white px-3 py-1.5 ring-2 ring-line">
+                    {"🥄".repeat(t.spoons)} {spoonsLabel(t.spoons)} · {formatRub(t.price)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="relative mx-auto w-full max-w-md">
+              <div className="absolute inset-6 rounded-full bg-teal-soft/60" aria-hidden />
+              <Image
+                src="/bobotik/bobotik-hi.png"
+                alt="Боботик, серый котик-маскот BoboScoop, машет лапкой"
+                width={800}
+                height={720}
+                priority
+                className="animate-float relative drop-shadow-xl"
+              />
+              <span className="absolute left-2 top-6 rotate-[-8deg] rounded-2xl border-2 border-ink bg-white px-3 py-1.5 text-sm font-extrabold shadow-pop">
+                привет! я Боботик 👋
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* How it works */}
+        <section className="mx-auto max-w-6xl px-4 py-16">
+          <SectionTitle eyebrow="Как это работает" title="Подарок, собранный ложечками" />
+          <ol className="grid gap-4 md:grid-cols-4">
+            {[
+              { icon: "🥄", title: "Выберите ложки", text: `1, 2 или ${settings.tiers.at(-1)?.spoons ?? 3} ложки сюрпризов, в среднем ~${settings.avgItems} предмета в боксе` },
+              { icon: "💗", title: "Расскажите о себе", text: "Любимые персонажи, цвета и что точно не класть" },
+              { icon: "💳", title: "Оплатите онлайн", text: "Бокс и доставка оплачиваются сразу, картой или по СБП" },
+              { icon: "📦", title: "Получите бокс", text: "Отправим через Яндекс Маркет, Ozon или Wildberries" },
+            ].map((s, i) => (
+              <li key={s.title} className="relative rounded-blob border-2 border-line bg-white p-6">
+                <span className="absolute right-5 top-4 text-5xl font-black text-pink-soft" aria-hidden>
+                  {i + 1}
+                </span>
+                <span className="text-4xl" aria-hidden>{s.icon}</span>
+                <h3 className="mt-3 text-lg font-black">{s.title}</h3>
+                <p className="mt-1 text-ink-soft">{s.text}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {/* Builder */}
+        <section id="builder" className="bg-pink-soft/50 py-16">
+          <div className="mx-auto max-w-6xl px-4">
+            <SectionTitle eyebrow="Конструктор" title="Соберите свой бокс">
+              Можно положить в корзину до {settings.maxBoxes} боксов, у каждого свои пожелания.
+            </SectionTitle>
+            <BoxBuilder
+              tiers={settings.tiers}
+              videoPrice={settings.videoPrice}
+              videoNote={settings.videoNote}
+              maxBoxes={settings.maxBoxes}
+              acceptingOrders={settings.acceptingOrders}
+              closedMessage={settings.closedMessage}
+              wishOptions={{
+                characters: settings.characters,
+                colors: settings.colors,
+                products: available.map((p) => p.name),
+                wishesNote: settings.wishesNote,
+              }}
+            />
+          </div>
+        </section>
+
+        {/* Assortment */}
+        <section id="assortment" className="mx-auto max-w-6xl px-4 py-16">
+          <SectionTitle eyebrow="Ассортимент" title="Что может попасть в бокс">
+            Каждый бокс уникален: собираем его из того, что сейчас есть в наличии.
+          </SectionTitle>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+            {products.map((p) => (
+              <li
+                key={p.id}
+                className={`overflow-hidden rounded-3xl border-2 bg-white ${p.available ? "border-line" : "border-dashed border-line opacity-60"}`}
+              >
+                <div className="relative grid aspect-square place-items-center bg-lilac-soft">
+                  {p.imageUrl ? (
+                    <Image src={p.imageUrl} alt={p.name} fill sizes="(min-width: 1024px) 16vw, (min-width: 640px) 33vw, 50vw" className="object-cover" />
+                  ) : (
+                    <span className="text-5xl" aria-hidden>{p.emoji}</span>
+                  )}
+                  {!p.available && (
+                    <span className="absolute bottom-2 left-2 rounded-full bg-white px-2 py-0.5 text-xs font-bold text-ink-soft">
+                      закончилось
+                    </span>
+                  )}
+                </div>
+                <div className="p-3">
+                  <p className="font-extrabold leading-tight">{p.name}</p>
+                  {p.description && <p className="mt-1 text-xs text-ink-soft">{p.description}</p>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* Reviews */}
+        {reviews.length > 0 && (
+          <section id="reviews" className="bg-teal-mist py-16">
+            <div className="mx-auto max-w-6xl px-4">
+              <SectionTitle eyebrow="Отзывы" title="Что говорят бобоскупики" />
+              <ul className="grid gap-4 md:grid-cols-3">
+                {reviews.map((r) => (
+                  <li key={r.id} className="flex flex-col rounded-blob border-2 border-ink bg-white p-6 shadow-pop">
+                    {r.imageUrl && (
+                      <div className="relative mb-4 aspect-[4/3] overflow-hidden rounded-2xl">
+                        <Image src={r.imageUrl} alt={`Фото от ${r.author}`} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover" />
+                      </div>
+                    )}
+                    <p className="text-pink-deep" aria-label={`Оценка ${r.rating} из 5`}>
+                      {"★".repeat(r.rating)}
+                      <span className="text-line">{"★".repeat(5 - r.rating)}</span>
+                    </p>
+                    <p className="mt-2 flex-1 leading-relaxed">{r.text}</p>
+                    <p className="mt-4 font-extrabold">{r.author}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
+
+        {/* About Bobotik */}
+        <section id="bobotik" className="mx-auto max-w-6xl px-4 py-16">
+          <div className="grid items-center gap-10 rounded-[2.5rem] border-2 border-ink bg-white p-6 shadow-pop sm:p-10 md:grid-cols-[320px_1fr]">
+            <Image
+              src="/bobotik/bobotik-boba.jpg"
+              alt="Боботик пьёт бабл-ти"
+              width={640}
+              height={640}
+              className="mx-auto w-full max-w-xs rotate-[-3deg] rounded-3xl border-2 border-ink"
+            />
+            <div>
+              <p className="text-sm font-extrabold uppercase tracking-widest text-pink-deep">Наш маскот</p>
+              <h2 className="mt-1 text-3xl font-black sm:text-4xl">{settings.aboutTitle}</h2>
+              <p className="mt-4 whitespace-pre-line text-lg leading-relaxed text-ink-soft">{settings.aboutText}</p>
+              <SocialLinks settings={settings} className="mt-6" />
+            </div>
+          </div>
+        </section>
+
+        {/* Delivery */}
+        <section className="mx-auto max-w-6xl px-4">
+          <div className="rounded-blob bg-lilac-soft p-6 sm:p-8">
+            <h2 className="text-2xl font-black">Доставка</h2>
+            <p className="mt-2 text-ink-soft">{settings.deliveryNote}</p>
+            <ul className="mt-4 flex flex-wrap gap-2">
+              {delivery.methods.map((m) => (
+                <li key={m.id} className="rounded-full bg-white px-4 py-2 font-bold">
+                  {m.name} · {delivery.zones.length > 0 ? "от " : ""}{formatRub(m.price)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        {faq.length > 0 && (
+          <section id="faq" className="mx-auto max-w-3xl px-4 py-16">
+            <SectionTitle eyebrow="FAQ" title="Частые вопросы" />
+            <div className="space-y-3">
+              {faq.map((f) => (
+                <details key={f.id} className="group rounded-3xl border-2 border-line bg-white open:border-ink">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 text-lg font-extrabold [&::-webkit-details-marker]:hidden">
+                    {f.question}
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-pink-soft transition group-open:rotate-45" aria-hidden>
+                      +
+                    </span>
+                  </summary>
+                  <p className="whitespace-pre-line px-5 pb-5 leading-relaxed text-ink-soft">{f.answer}</p>
+                </details>
+              ))}
+            </div>
+          </section>
+        )}
+      </main>
+      <SiteFooter settings={settings} />
+    </div>
+  );
+}

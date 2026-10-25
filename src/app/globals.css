@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Nunito Variable", ui-rounded, system-ui, sans-serif;
+
+  --color-cream: #fff9fb;
+  --color-ink: #3a2530;
+  --color-ink-soft: #6f5864;
+  --color-teal: #0f9ea5;
+  --color-teal-deep: #0b7d83;
+  --color-teal-soft: #86cdd3;
+  --color-teal-mist: #e3f5f6;
+  --color-pink: #f39aa7;
+  --color-pink-deep: #e0697d;
+  --color-pink-soft: #ffe4e9;
+  --color-lilac: #c9c7d3;
+  --color-lilac-soft: #f0eef7;
+  --color-line: #f1dfe5;
+
+  --radius-blob: 2rem;
+  --shadow-soft: 0 10px 30px -12px rgb(224 105 125 / 0.25);
+  --shadow-pop: 0 4px 0 0 var(--color-ink);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+  body {
+    background: var(--color-cream);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: var(--color-pink-soft);
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-teal);
+    outline-offset: 2px;
+  }
+}
+
+@utility dotted-bg {
+  background-image: radial-gradient(var(--color-pink-soft) 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-12px) rotate(2deg); }
+}
+@utility animate-float {
+  animation: float 5s ease-in-out infinite;
+}
+@keyframes pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+@utility animate-pop {
+  animation: pop 0.35s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-float, .animate-pop { animation: none; }
+  html { scroll-behavior: auto; }
+}
