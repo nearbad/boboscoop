@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useCart, type CartBox } from "@/components/cart-context";
@@ -8,6 +9,43 @@ import { boxPrice, boxesLabel, cartSubtotal, formatRub, spoonsLabel, type Pricin
 
 type Method = { id: number; name: string; price: number; note: string };
 type Zone = { id: number; name: string; extra: number };
+export type PackInfo = { id: number; slug: string; title: string; price: number; image: string | null; limit: number };
+
+function PackLine({ packId, qty, pack }: { packId: number; qty: number; pack: PackInfo | undefined }) {
+  const { setPackQty } = useCart();
+  if (!pack) {
+    return (
+      <li className="flex items-center justify-between gap-3 rounded-blob border-2 border-dashed border-line bg-white p-5">
+        <span className="font-bold text-ink-soft">Этот готовый бокс больше недоступен</span>
+        <button type="button" onClick={() => setPackQty(packId, 0)} className="rounded-full px-3 py-2 text-sm font-bold hover:bg-pink-soft">
+          Убрать
+        </button>
+      </li>
+    );
+  }
+  const over = qty > pack.limit;
+  return (
+    <li className="flex flex-wrap items-center gap-4 rounded-blob border-2 border-line bg-white p-4">
+      <Link href={`/shop/${pack.slug}`} className="relative grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-2xl bg-pink-soft text-3xl">
+        {pack.image ? <Image src={pack.image} alt="" fill sizes="80px" className="object-cover" /> : <span aria-hidden>🎁</span>}
+      </Link>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-extrabold text-pink-deep">Готовый бокс</p>
+        <Link href={`/shop/${pack.slug}`} className="text-lg font-black hover:underline">{pack.title}</Link>
+        <p className="text-sm text-ink-soft">{formatRub(pack.price)} за шт.</p>
+        {over && <p className="text-sm font-bold text-pink-deep">{pack.limit > 0 ? `Можно не больше ${pack.limit} шт.` : "Закончился"}</p>}
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="flex items-center rounded-full border-2 border-line">
+          <button type="button" onClick={() => setPackQty(packId, qty - 1)} className="h-9 w-9 text-lg font-black" aria-label="Убрать один">−</button>
+          <span className="min-w-6 text-center font-black">{qty}</span>
+          <button type="button" onClick={() => setPackQty(packId, qty + 1)} disabled={qty >= pack.limit} className="h-9 w-9 text-lg font-black disabled:opacity-30" aria-label="Добавить один">+</button>
+        </div>
+        <span className="w-24 text-right text-lg font-black">{formatRub(pack.price * qty)}</span>
+      </div>
+    </li>
+  );
+}
 
 const input =
   "w-full rounded-2xl border-2 border-line bg-white px-4 py-3 placeholder:text-ink-soft/60 focus:border-teal focus:outline-none";
@@ -114,8 +152,10 @@ export function CartView({
   closedMessage,
   methods,
   zones,
+  packs,
   wishOptions,
 }: {
+  packs: PackInfo[];
   pricing: PricingSettings;
   acceptingOrders: boolean;
   closedMessage: string;
@@ -133,7 +173,7 @@ export function CartView({
 
   if (!cart.hydrated) return <p className="mt-8 text-ink-soft">Загружаем корзину…</p>;
 
-  if (cart.boxes.length === 0) {
+  if (cart.count === 0) {
     return (
       <div className="mt-8 rounded-blob border-2 border-dashed border-pink bg-white p-10 text-center">
         <p className="text-5xl" aria-hidden>🧺</p>
@@ -151,7 +191,9 @@ export function CartView({
 
   const method = methods.find((m) => m.id === methodId);
   const zone = zones.find((z) => z.id === zoneId);
-  const subtotal = cartSubtotal(pricing, cart.boxes);
+  const packLines = cart.packs.map((l) => ({ ...l, pack: packs.find((p) => p.id === l.packId) }));
+  const subtotal = cartSubtotal(pricing, cart.boxes) + packLines.reduce((s, l) => s + (l.pack?.price ?? 0) * l.qty, 0);
+  const invalidPack = packLines.some((l) => !l.pack || l.qty > l.pack.limit);
   const delivery = method ? method.price + (zone?.extra ?? 0) : 0;
   const overLimit = cart.boxes.length > pricing.maxBoxes;
   const invalidBox = cart.boxes.some((b) => boxPrice(pricing, b) === null);
@@ -170,6 +212,7 @@ export function CartView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           boxes: cart.boxes.map(({ spoons, video, wishes }) => ({ spoons, video, wishes })),
+          packs: cart.packs.map(({ packId, qty }) => ({ packId, qty })),
           ...form,
           deliveryMethodId: method.id,
           deliveryZoneId: zone?.id ?? null,
@@ -189,28 +232,44 @@ export function CartView({
   return (
     <form onSubmit={submit} className="mt-8 grid gap-6 lg:grid-cols-[1fr_380px] lg:items-start">
       <div className="space-y-6">
-        <section>
-          <div className="mb-3 flex items-baseline justify-between gap-3">
-            <h2 className="text-xl font-black">
-              {boxesLabel(cart.boxes.length)} <span className="text-base font-bold text-ink-soft">из {pricing.maxBoxes} возможных</span>
-            </h2>
-            {cart.boxes.length < pricing.maxBoxes && (
-              <Link href="/#builder" className="text-sm font-bold text-teal-deep underline underline-offset-2">
-                + ещё бокс
-              </Link>
+        {packLines.length > 0 && (
+          <section>
+            <div className="mb-3 flex items-baseline justify-between gap-3">
+              <h2 className="text-xl font-black">Готовые боксы</h2>
+              <Link href="/shop" className="text-sm font-bold text-teal-deep underline underline-offset-2">каталог</Link>
+            </div>
+            <ul className="space-y-3">
+              {packLines.map((l) => (
+                <PackLine key={l.packId} packId={l.packId} qty={l.qty} pack={l.pack} />
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {cart.boxes.length > 0 && (
+          <section>
+            <div className="mb-3 flex items-baseline justify-between gap-3">
+              <h2 className="text-xl font-black">
+                {boxesLabel(cart.boxes.length)} <span className="text-base font-bold text-ink-soft">из {pricing.maxBoxes} возможных</span>
+              </h2>
+              {cart.boxes.length < pricing.maxBoxes && (
+                <Link href="/#builder" className="text-sm font-bold text-teal-deep underline underline-offset-2">
+                  + ещё бокс
+                </Link>
+              )}
+            </div>
+            <ul className="space-y-4">
+              {cart.boxes.map((b, i) => (
+                <BoxCard key={b.id} box={b} index={i} pricing={pricing} wishOptions={wishOptions} />
+              ))}
+            </ul>
+            {overLimit && (
+              <p className="mt-3 font-bold text-pink-deep">
+                В одном заказе можно не больше {boxesLabel(pricing.maxBoxes)}, удалите лишние
+              </p>
             )}
-          </div>
-          <ul className="space-y-4">
-            {cart.boxes.map((b, i) => (
-              <BoxCard key={b.id} box={b} index={i} pricing={pricing} wishOptions={wishOptions} />
-            ))}
-          </ul>
-          {overLimit && (
-            <p className="mt-3 font-bold text-pink-deep">
-              В одном заказе можно не больше {boxesLabel(pricing.maxBoxes)}, удалите лишние
-            </p>
-          )}
-        </section>
+          </section>
+        )}
 
         <section className="rounded-blob border-2 border-line bg-white p-5 sm:p-7">
           <h2 className="mb-4 text-xl font-black">Доставка</h2>
@@ -308,6 +367,16 @@ export function CartView({
               <dd className="font-bold">{formatRub(boxPrice(pricing, b) ?? 0)}</dd>
             </div>
           ))}
+          {packLines.map((l) =>
+            l.pack ? (
+              <div key={l.packId} className="flex justify-between gap-3">
+                <dt className="text-ink-soft">
+                  {l.pack.title} × {l.qty}
+                </dt>
+                <dd className="font-bold">{formatRub(l.pack.price * l.qty)}</dd>
+              </div>
+            ) : null,
+          )}
           <div className="flex justify-between gap-3">
             <dt className="text-ink-soft">Доставка{method ? `, ${method.name}` : ""}</dt>
             <dd className="font-bold">{zones.length > 0 && !zone ? "выберите регион" : formatRub(delivery)}</dd>
@@ -337,7 +406,7 @@ export function CartView({
 
         <button
           type="submit"
-          disabled={submitting || overLimit || invalidBox || !acceptingOrders}
+          disabled={submitting || overLimit || invalidBox || invalidPack || !acceptingOrders}
           className="mt-5 w-full rounded-full border-2 border-ink bg-pink-deep px-6 py-3.5 text-lg font-black text-white shadow-pop transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? "Создаём заказ…" : "Перейти к оплате"}

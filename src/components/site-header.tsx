@@ -6,14 +6,16 @@ import { useCart } from "@/components/cart-context";
 
 const NAV = [
   { href: "/#builder", label: "Собрать бокс" },
-  { href: "/#assortment", label: "Ассортимент" },
-  { href: "/#reviews", label: "Отзывы" },
+  { href: "/shop", label: "Каталог" },
+  { href: "/assortment", label: "Что в боксе" },
+  { href: "/reviews", label: "Отзывы" },
   { href: "/#faq", label: "Вопросы" },
 ];
 
-export function SiteHeader({ showReviews = false }: { showReviews?: boolean }) {
-  const { boxes, hydrated } = useCart();
-  const count = hydrated ? boxes.length : 0;
+export function SiteHeaderClient({ showReviews = true }: { showReviews?: boolean }) {
+  const cart = useCart();
+  const count = cart.hydrated ? cart.count : 0;
+  const links = NAV.filter((n) => showReviews || n.href !== "/reviews");
   return (
     <header className="sticky top-0 z-40 border-b border-line/70 bg-cream/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
@@ -22,7 +24,7 @@ export function SiteHeader({ showReviews = false }: { showReviews?: boolean }) {
           <span className="text-xl">BoboScoop</span>
         </Link>
         <nav className="ml-auto hidden items-center gap-1 md:flex" aria-label="Разделы">
-          {NAV.filter((n) => showReviews || n.href !== "/#reviews").map((n) => (
+          {links.map((n) => (
             <Link key={n.href} href={n.href} className="rounded-full px-3 py-2 text-sm font-bold text-ink-soft transition hover:bg-pink-soft hover:text-ink">
               {n.label}
             </Link>
@@ -43,6 +45,13 @@ export function SiteHeader({ showReviews = false }: { showReviews?: boolean }) {
           </span>
         </Link>
       </div>
+      <nav className="-mt-1 flex gap-1 overflow-x-auto px-3 pb-2 md:hidden" aria-label="Разделы">
+        {links.map((n) => (
+          <Link key={n.href} href={n.href} className="whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-sm font-bold text-ink-soft ring-1 ring-line">
+            {n.label}
+          </Link>
+        ))}
+      </nav>
     </header>
   );
 }

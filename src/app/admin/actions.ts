@@ -9,7 +9,7 @@ import { ADMIN_COOKIE, adminCookieOptions, createAdminToken } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
 import { ORDER_STATUSES, type OrderStatus } from "@/lib/db/schema";
 import { saveSettings, settingsSchema } from "@/lib/settings";
-import { saveImage } from "@/lib/upload";
+import { saveImage, saveImages } from "@/lib/upload";
 
 export type ActionState = { ok?: boolean; error?: string } | null;
 
@@ -138,7 +138,83 @@ export async function deleteDeliveryZone(f: FormData) {
   done();
 }
 
+// Ready-made packs
+
+const TRANSLIT: Record<string, string> = {
+  а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n",
+  о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "h", ц: "c", ч: "ch", ш: "sh", щ: "sch", ъ: "", ы: "y", ь: "",
+  э: "e", ю: "yu", я: "ya",
+};
+
+function slugify(s: string) {
+  return (
+    s
+      .toLowerCase()
+      .split("")
+      .map((c) => TRANSLIT[c] ?? c)
+      .join("")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "box"
+  );
+}
+
+export async function savePack(_prev: ActionState, f: FormData): Promise<ActionState> {
+  try {
+    await requireAdmin();
+    const id = int(f, "id");
+    const current = id ? await db.query.packs.findFirst({ where: eq(schema.packs.id, id) }) : undefined;
+    const removed = new Set(f.getAll("removeImages").map(String));
+    const kept = (current?.images ?? []).filter((u) => !removed.has(u));
+    const images = [...kept, ...(await saveImages(f.getAll("images")))];
+    const stockRaw = text(f, "stock");
+    const values = {
+      title: text(f, "title"),
+      slug: slugify(text(f, "slug") || text(f, "title")),
+      description: text(f, "description"),
+      price: int(f, "price"),
+      images,
+      itemsCount: text(f, "itemsCount") ? int(f, "itemsCount") : null,
+      badge: text(f, "badge"),
+      stock: stockRaw === "" ? null : Math.max(0, int(f, "stock")),
+      maxPerOrder: Math.max(1, int(f, "maxPerOrder") || 1),
+      available: bool(f, "available"),
+      sort: int(f, "sort"),
+    };
+    if (!values.title) return { error: "Укажите название" };
+    if (values.price <= 0) return { error: "Укажите цену" };
+    const clash = await db.query.packs.findFirst({ where: eq(schema.packs.slug, values.slug) });
+    if (clash && clash.id !== id) return { error: `Адрес «${values.slug}» уже занят другим боксом` };
+    if (id) await db.update(schema.packs).set(values).where(eq(schema.packs.id, id));
+    else await db.insert(schema.packs).values(values);
+    done();
+    return { ok: true };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Ошибка" };
+  }
+}
+
+export async function deletePack(f: FormData) {
+  await requireAdmin();
+  await db.delete(schema.packs).where(eq(schema.packs.id, int(f, "id")));
+  done();
+}
+
 // Reviews
+
+// Creates one review per uploaded screenshot.
+export async function uploadReviewScreenshots(_prev: ActionState, f: FormData): Promise<ActionState> {
+  try {
+    await requireAdmin();
+    const urls = await saveImages(f.getAll("images"));
+    if (urls.length === 0) return { error: "Выберите скриншоты" };
+    await db.insert(schema.reviews).values(urls.map((imageUrl, i) => ({ imageUrl, sort: -urls.length + i, visible: true })));
+    done();
+    return { ok: true };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Ошибка" };
+  }
+}
 
 export async function saveReview(_prev: ActionState, f: FormData): Promise<ActionState> {
   try {
@@ -153,7 +229,7 @@ export async function saveReview(_prev: ActionState, f: FormData): Promise<Actio
       sort: int(f, "sort"),
       imageUrl: await imageField(f, current?.imageUrl ?? null),
     };
-    if (!values.author || !values.text) return { error: "Заполните автора и текст" };
+    if (!values.text && !values.imageUrl) return { error: "Добавьте текст или скриншот" };
     if (id) await db.update(schema.reviews).set(values).where(eq(schema.reviews.id, id));
     else await db.insert(schema.reviews).values(values);
     done();
@@ -208,6 +284,7 @@ export async function updateSettings(_prev: ActionState, f: FormData): Promise<A
     videoPrice: text(f, "videoPrice"),
     avgItems: text(f, "avgItems"),
     maxBoxes: text(f, "maxBoxes"),
+    maxExclude: text(f, "maxExclude"),
     characters: lines(f, "characters"),
     colors: lines(f, "colors"),
     heroTitle: text(f, "heroTitle"),

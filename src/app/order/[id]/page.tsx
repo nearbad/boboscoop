@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PayButton } from "@/components/pay-button";
 import { SiteFooter, SocialLinks } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
+import { SiteHeader } from "@/components/header";
 import { getOrder, STATUS_LABELS, syncPayment } from "@/lib/orders";
 import { formatRub, spoonsLabel } from "@/lib/pricing";
 import { getSettings } from "@/lib/settings";
@@ -62,6 +62,14 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                   {b.video ? " + видео" : ""}
                 </span>
                 <span className="font-bold">{formatRub(b.price)}</span>
+              </li>
+            ))}
+            {order.packs.map((p) => (
+              <li key={p.packId} className="flex justify-between gap-3 border-b border-line pb-3">
+                <span>
+                  <span className="font-bold">{p.title}</span> × {p.qty}
+                </span>
+                <span className="font-bold">{formatRub(p.price * p.qty)}</span>
               </li>
             ))}
             <li className="flex justify-between gap-3">

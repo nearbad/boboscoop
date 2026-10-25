@@ -38,6 +38,18 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
               </dl>
             </Card>
           ))}
+          {order.packs.length > 0 && (
+            <Card title="Готовые боксы">
+              <ul className="space-y-1 text-sm">
+                {order.packs.map((p) => (
+                  <li key={p.packId} className="flex justify-between gap-3">
+                    <span>🎁 {p.title} × {p.qty}</span>
+                    <span className="font-bold">{formatRub(p.price * p.qty)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
           <Card title="Покупатель и доставка">
             <dl className="grid gap-2 text-sm sm:grid-cols-[160px_1fr]">
               <dt className="font-bold text-ink-soft">ФИО</dt>
@@ -59,7 +71,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
         <div className="space-y-4">
           <Card title="Оплата">
             <dl className="space-y-1 text-sm">
-              <div className="flex justify-between"><dt>Боксы</dt><dd className="font-bold">{formatRub(order.subtotal)}</dd></div>
+              <div className="flex justify-between"><dt>Товары</dt><dd className="font-bold">{formatRub(order.subtotal)}</dd></div>
               <div className="flex justify-between"><dt>Доставка</dt><dd className="font-bold">{formatRub(order.deliveryPrice)}</dd></div>
               <div className="flex justify-between border-t border-line pt-1 text-base"><dt className="font-black">Итого</dt><dd className="font-black">{formatRub(order.total)}</dd></div>
               <div className="flex justify-between pt-2 text-ink-soft"><dt>Создан</dt><dd>{fmt(order.createdAt)}</dd></div>

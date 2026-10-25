@@ -27,7 +27,10 @@ export default async function SettingsPage() {
             <div className="space-y-3">
               <Field label="Запись видео, ₽"><Input name="videoPrice" type="number" min={0} defaultValue={s.videoPrice} /></Field>
               <Field label="Предметов в боксе в среднем"><Input name="avgItems" type="number" min={0} defaultValue={s.avgItems} /></Field>
-              <Field label="Максимум боксов в заказе"><Input name="maxBoxes" type="number" min={1} max={50} defaultValue={s.maxBoxes} /></Field>
+              <Field label="Максимум боксов на ложки в заказе"><Input name="maxBoxes" type="number" min={1} max={50} defaultValue={s.maxBoxes} /></Field>
+              <Field label="Сколько предметов можно исключить («не класть»)" hint="0 — скрыть этот выбор">
+                <Input name="maxExclude" type="number" min={0} max={100} defaultValue={s.maxExclude} />
+              </Field>
             </div>
           </div>
         </Card>

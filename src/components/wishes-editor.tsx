@@ -6,6 +6,7 @@ export type WishOptions = {
   characters: string[];
   colors: string[];
   products: string[];
+  maxExclude: number;
   wishesNote: string;
 };
 
@@ -20,6 +21,7 @@ function ChipGroup({
   selected,
   onChange,
   tone,
+  max,
 }: {
   legend: string;
   hint?: string;
@@ -27,6 +29,7 @@ function ChipGroup({
   selected: string[];
   onChange: (next: string[]) => void;
   tone: "pink" | "teal" | "no";
+  max?: number;
 }) {
   const on = {
     pink: "border-pink-deep bg-pink-soft text-ink",
@@ -36,19 +39,28 @@ function ChipGroup({
   if (options.length === 0) return null;
   return (
     <fieldset>
-      <legend className="mb-1 font-extrabold">{legend}</legend>
+      <legend className="mb-1 flex w-full items-baseline justify-between gap-3 font-extrabold">
+        {legend}
+        {max !== undefined && (
+          <span className={`text-sm ${selected.length >= max ? "text-pink-deep" : "text-ink-soft"}`} aria-live="polite">
+            {selected.length} из {max}
+          </span>
+        )}
+      </legend>
       {hint && <p className="mb-2 text-sm text-ink-soft">{hint}</p>}
       <div className="flex flex-wrap gap-2">
         {options.map((o) => {
           const active = selected.includes(o);
+          const locked = !active && max !== undefined && selected.length >= max;
           return (
             <button
               key={o}
               type="button"
               aria-pressed={active}
+              disabled={locked}
               onClick={() => onChange(toggle(selected, o))}
               className={`min-h-10 rounded-full border-2 px-3.5 py-1.5 text-sm font-bold transition ${
-                active ? on : "border-line bg-white text-ink-soft hover:border-pink"
+                active ? on : "border-line bg-white text-ink-soft hover:border-pink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line"
               }`}
             >
               {tone === "no" && active ? "🚫 " : active ? "✓ " : ""}
@@ -89,14 +101,17 @@ export function WishesEditor({
         onChange={(colors) => onChange({ ...value, colors })}
         tone="teal"
       />
-      <ChipGroup
-        legend="Что не класть в бокс"
-        hint="Отметьте предметы, которые не хотите получать. Заменим их на другие"
-        options={options.products}
-        selected={value.exclude}
-        onChange={(exclude) => onChange({ ...value, exclude })}
-        tone="no"
-      />
+      {options.maxExclude > 0 && (
+        <ChipGroup
+          legend="Что не класть в бокс"
+          hint={`Отметьте до ${options.maxExclude} предметов, которые не хотите получать. Заменим их на другие`}
+          max={options.maxExclude}
+          options={options.products}
+          selected={value.exclude}
+          onChange={(exclude) => onChange({ ...value, exclude })}
+          tone="no"
+        />
+      )}
       <div>
         <label htmlFor={`${idPrefix}-comment`} className="mb-1 block font-extrabold">
           Ещё пожелания

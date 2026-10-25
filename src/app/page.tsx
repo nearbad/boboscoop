@@ -1,31 +1,25 @@
 import Image from "next/image";
+import Link from "next/link";
 import { BoxBuilder } from "@/components/box-builder";
+import { PackCard } from "@/components/pack-card";
+import { ReviewWall } from "@/components/review-wall";
+import { SectionTitle } from "@/components/section-title";
 import { SiteFooter, SocialLinks } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
+import { SiteHeader } from "@/components/header";
 import { getLandingData } from "@/lib/catalog";
 import { formatRub, spoonsLabel } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
-function SectionTitle({ eyebrow, title, children }: { eyebrow: string; title: string; children?: React.ReactNode }) {
-  return (
-    <div className="mb-8 max-w-2xl">
-      <p className="text-sm font-extrabold uppercase tracking-widest text-pink-deep">{eyebrow}</p>
-      <h2 className="mt-1 text-3xl font-black leading-tight sm:text-4xl">{title}</h2>
-      {children && <p className="mt-3 text-lg leading-relaxed text-ink-soft">{children}</p>}
-    </div>
-  );
-}
-
 export default async function Home() {
-  const { settings, products, reviews, faq, delivery } = await getLandingData();
+  const { settings, products, reviews, faq, delivery, packs } = await getLandingData();
   const available = products.filter((p) => p.available);
   const minPrice = Math.min(...settings.tiers.map((t) => t.price));
 
   return (
     // Bottom padding on phones leaves room for the builder's fixed price bar.
     <div className="pb-20 lg:pb-0">
-      <SiteHeader showReviews={reviews.length > 0} />
+      <SiteHeader />
       <main>
         {/* Hero */}
         <section className="dotted-bg relative overflow-hidden">
@@ -115,42 +109,51 @@ export default async function Home() {
                 characters: settings.characters,
                 colors: settings.colors,
                 products: available.map((p) => p.name),
+                maxExclude: settings.maxExclude,
                 wishesNote: settings.wishesNote,
               }}
             />
           </div>
         </section>
 
-        {/* Assortment */}
-        <section id="assortment" className="mx-auto max-w-6xl px-4 py-16">
-          <SectionTitle eyebrow="Ассортимент" title="Что может попасть в бокс">
-            Каждый бокс уникален: собираем его из того, что сейчас есть в наличии.
-          </SectionTitle>
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {products.map((p) => (
-              <li
-                key={p.id}
-                className={`overflow-hidden rounded-3xl border-2 bg-white ${p.available ? "border-line" : "border-dashed border-line opacity-60"}`}
-              >
-                <div className="relative grid aspect-square place-items-center bg-lilac-soft">
-                  {p.imageUrl ? (
-                    <Image src={p.imageUrl} alt={p.name} fill sizes="(min-width: 1024px) 16vw, (min-width: 640px) 33vw, 50vw" className="object-cover" />
-                  ) : (
-                    <span className="text-5xl" aria-hidden>{p.emoji}</span>
-                  )}
-                  {!p.available && (
-                    <span className="absolute bottom-2 left-2 rounded-full bg-white px-2 py-0.5 text-xs font-bold text-ink-soft">
-                      закончилось
-                    </span>
-                  )}
-                </div>
-                <div className="p-3">
-                  <p className="font-extrabold leading-tight">{p.name}</p>
-                  {p.description && <p className="mt-1 text-xs text-ink-soft">{p.description}</p>}
-                </div>
-              </li>
-            ))}
-          </ul>
+        {/* Ready-made packs */}
+        {packs.length > 0 && (
+          <section className="mx-auto max-w-6xl px-4 pt-16">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <SectionTitle eyebrow="Каталог" title="Готовые боксы">
+                Наборы с фиксированной ценой: просто положите в корзину.
+              </SectionTitle>
+              <Link href="/shop" className="mb-8 font-bold text-teal-deep underline underline-offset-2">Весь каталог →</Link>
+            </div>
+            <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {packs.slice(0, 3).map((p) => (
+                <PackCard key={p.id} pack={p} />
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* Assortment teaser */}
+        <section className="mx-auto max-w-6xl px-4 py-16">
+          <Link
+            href="/assortment"
+            className="group flex flex-col gap-5 rounded-[2.5rem] border-2 border-ink bg-white p-6 shadow-pop transition hover:-translate-y-0.5 sm:flex-row sm:items-center sm:p-8"
+          >
+            <div className="flex -space-x-3" aria-hidden>
+              {available.slice(0, 5).map((p) => (
+                <span key={p.id} className="grid h-14 w-14 place-items-center rounded-full border-2 border-ink bg-lilac-soft text-2xl">
+                  {p.emoji}
+                </span>
+              ))}
+            </div>
+            <div className="flex-1">
+              <h2 className="text-2xl font-black">Что может попасть в бокс?</h2>
+              <p className="mt-1 text-ink-soft">
+                {available.length} видов предметов: брелоки, стикеры, плюшевые игрушки, сквиши и много другого
+              </p>
+            </div>
+            <span className="font-black text-teal-deep group-hover:underline">Смотреть ассортимент →</span>
+          </Link>
         </section>
 
         {/* Reviews */}
@@ -158,23 +161,14 @@ export default async function Home() {
           <section id="reviews" className="bg-teal-mist py-16">
             <div className="mx-auto max-w-6xl px-4">
               <SectionTitle eyebrow="Отзывы" title="Что говорят бобоскупики" />
-              <ul className="grid gap-4 md:grid-cols-3">
-                {reviews.map((r) => (
-                  <li key={r.id} className="flex flex-col rounded-blob border-2 border-ink bg-white p-6 shadow-pop">
-                    {r.imageUrl && (
-                      <div className="relative mb-4 aspect-[4/3] overflow-hidden rounded-2xl">
-                        <Image src={r.imageUrl} alt={`Фото от ${r.author}`} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover" />
-                      </div>
-                    )}
-                    <p className="text-pink-deep" aria-label={`Оценка ${r.rating} из 5`}>
-                      {"★".repeat(r.rating)}
-                      <span className="text-line">{"★".repeat(5 - r.rating)}</span>
-                    </p>
-                    <p className="mt-2 flex-1 leading-relaxed">{r.text}</p>
-                    <p className="mt-4 font-extrabold">{r.author}</p>
-                  </li>
-                ))}
-              </ul>
+              <ReviewWall reviews={reviews.slice(0, 6)} />
+              {reviews.length > 6 && (
+                <p className="mt-4 text-center">
+                  <Link href="/reviews" className="font-bold text-teal-deep underline underline-offset-2">
+                    Все отзывы ({reviews.length}) →
+                  </Link>
+                </p>
+              )}
             </div>
           </section>
         )}

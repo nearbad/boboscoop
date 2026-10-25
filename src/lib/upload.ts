@@ -4,7 +4,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { put } from "@vercel/blob";
 
-const ALLOWED = new Map([
+export const LOCAL_UPLOAD_DIR = path.join(process.cwd(), ".uploads");
+
+export const ALLOWED = new Map([
   ["image/jpeg", "jpg"],
   ["image/png", "png"],
   ["image/webp", "webp"],
@@ -23,8 +25,17 @@ export async function saveImage(file: FormDataEntryValue | null): Promise<string
     const blob = await put(`uploads/${name}`, file, { access: "public", contentType: file.type });
     return blob.url;
   }
-  const dir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, name), Buffer.from(await file.arrayBuffer()));
+  // Local fallback for development; served by src/app/uploads/[name]/route.ts.
+  await mkdir(LOCAL_UPLOAD_DIR, { recursive: true });
+  await writeFile(path.join(LOCAL_UPLOAD_DIR, name), Buffer.from(await file.arrayBuffer()));
   return `/uploads/${name}`;
+}
+
+export async function saveImages(files: FormDataEntryValue[]): Promise<string[]> {
+  const urls: string[] = [];
+  for (const f of files) {
+    const url = await saveImage(f);
+    if (url) urls.push(url);
+  }
+  return urls;
 }

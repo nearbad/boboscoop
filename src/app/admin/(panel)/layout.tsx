@@ -9,6 +9,7 @@ export const metadata: Metadata = { title: "Админка · BoboScoop", robots
 
 const NAV = [
   { href: "/admin", label: "📦 Заказы" },
+  { href: "/admin/packs", label: "🎁 Готовые боксы" },
   { href: "/admin/products", label: "🎀 Ассортимент" },
   { href: "/admin/settings", label: "💰 Цены и тексты" },
   { href: "/admin/delivery", label: "🚚 Доставка" },

@@ -18,6 +18,8 @@ export type Box = {
 
 export type OrderBox = Box & { price: number };
 
+export type OrderPack = { packId: number; title: string; price: number; qty: number };
+
 export type PricingSettings = {
   tiers: Tier[];
   videoPrice: number;
@@ -38,6 +40,10 @@ export function boxPrice(s: PricingSettings, box: Pick<Box, "spoons" | "video">)
 
 export function cartSubtotal(s: PricingSettings, boxes: Box[]): number {
   return boxes.reduce((sum, b) => sum + (boxPrice(s, b) ?? 0), 0);
+}
+
+export function packsSubtotal(packs: { price: number; qty: number }[]): number {
+  return packs.reduce((sum, p) => sum + p.price * p.qty, 0);
 }
 
 export function maxSpoons(s: PricingSettings): number {

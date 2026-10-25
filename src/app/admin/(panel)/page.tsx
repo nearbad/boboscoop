@@ -48,7 +48,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 <th className="p-3">№</th>
                 <th className="p-3">Дата</th>
                 <th className="p-3">Покупатель</th>
-                <th className="p-3">Боксы</th>
+                <th className="p-3">Состав</th>
                 <th className="p-3">Доставка</th>
                 <th className="p-3 text-right">Сумма</th>
                 <th className="p-3">Статус</th>
@@ -65,7 +65,12 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                     <span className="font-bold">{o.customerName}</span>
                     <span className="block text-xs text-ink-soft">{o.telegram || o.phone}</span>
                   </td>
-                  <td className="p-3">{o.boxes.map((b) => `${spoonsLabel(b.spoons)}${b.video ? " 🎥" : ""}`).join(", ")}</td>
+                  <td className="p-3">
+                    {[
+                      ...o.boxes.map((b) => `${spoonsLabel(b.spoons)}${b.video ? " 🎥" : ""}`),
+                      ...o.packs.map((p) => `🎁 ${p.title}${p.qty > 1 ? ` × ${p.qty}` : ""}`),
+                    ].join(", ")}
+                  </td>
                   <td className="p-3">{o.deliveryMethod}</td>
                   <td className="p-3 text-right font-bold">{formatRub(o.total)}</td>
                   <td className="p-3"><StatusBadge status={o.status} /></td>

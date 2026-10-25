@@ -1,5 +1,5 @@
 import { boolean, integer, jsonb, pgTable, serial, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import type { OrderBox } from "@/lib/pricing";
+import type { OrderBox, OrderPack } from "@/lib/pricing";
 
 // Single-row table holding the shop settings as JSON (see src/lib/settings.ts).
 export const settings = pgTable("settings", {
@@ -36,10 +36,28 @@ export const deliveryZones = pgTable("delivery_zones", {
   sort: integer("sort").notNull().default(0),
 });
 
+// Ready-made boxes with a fixed price and content, sold alongside the scoop boxes.
+export const packs = pgTable("packs", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  price: integer("price").notNull(),
+  images: jsonb("images").$type<string[]>().notNull().default([]),
+  itemsCount: integer("items_count"),
+  badge: text("badge").notNull().default(""),
+  // null = unlimited
+  stock: integer("stock"),
+  maxPerOrder: integer("max_per_order").notNull().default(5),
+  available: boolean("available").notNull().default(true),
+  sort: integer("sort").notNull().default(0),
+});
+
+// A review is either text or a screenshot of the customer's message (or both).
 export const reviews = pgTable("reviews", {
   id: serial("id").primaryKey(),
-  author: text("author").notNull(),
-  text: text("text").notNull(),
+  author: text("author").notNull().default(""),
+  text: text("text").notNull().default(""),
   rating: integer("rating").notNull().default(5),
   imageUrl: text("image_url"),
   visible: boolean("visible").notNull().default(true),
@@ -76,6 +94,7 @@ export const orders = pgTable("orders", {
   address: text("address").notNull(),
   comment: text("comment").notNull().default(""),
   boxes: jsonb("boxes").$type<OrderBox[]>().notNull(),
+  packs: jsonb("packs").$type<OrderPack[]>().notNull().default([]),
   subtotal: integer("subtotal").notNull(),
   deliveryPrice: integer("delivery_price").notNull(),
   total: integer("total").notNull(),
@@ -88,6 +107,7 @@ export const orders = pgTable("orders", {
 export type Product = typeof products.$inferSelect;
 export type DeliveryMethod = typeof deliveryMethods.$inferSelect;
 export type DeliveryZone = typeof deliveryZones.$inferSelect;
+export type Pack = typeof packs.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
 export type FaqItem = typeof faq.$inferSelect;
 export type Order = typeof orders.$inferSelect;

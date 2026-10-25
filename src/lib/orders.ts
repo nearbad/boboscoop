@@ -1,9 +1,9 @@
 import "server-only";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/lib/db";
 import type { Order, OrderStatus } from "@/lib/db/schema";
-import { boxPrice, formatRub, spoonsLabel, type OrderBox } from "@/lib/pricing";
+import { boxPrice, formatRub, spoonsLabel, type OrderBox, type OrderPack } from "@/lib/pricing";
 import { getSettings } from "@/lib/settings";
 import { escapeHtml, sendTelegram } from "@/lib/telegram";
 import { createPayment, getPayment, isDemoPayments } from "@/lib/yookassa";
@@ -26,7 +26,8 @@ export const checkoutSchema = z.object({
         }),
       }),
     )
-    .min(1),
+    .max(50),
+  packs: z.array(z.object({ packId: z.number().int(), qty: z.number().int().min(1).max(100) })).max(50).default([]),
   name: str(120).min(2, "Укажите имя"),
   phone: str(40).regex(/^[+\d][\d\s()-]{9,}$/, "Проверьте номер телефона"),
   telegram: str(60),
@@ -44,8 +45,12 @@ export class CheckoutError extends Error {}
 export async function createOrder(input: CheckoutInput): Promise<Order> {
   const settings = await getSettings();
   if (!settings.acceptingOrders) throw new CheckoutError(settings.closedMessage);
+  if (input.boxes.length + input.packs.length === 0) throw new CheckoutError("Корзина пуста");
   if (input.boxes.length > settings.maxBoxes) {
-    throw new CheckoutError(`В одном заказе можно не больше ${settings.maxBoxes} боксов`);
+    throw new CheckoutError(`В одном заказе можно не больше ${settings.maxBoxes} боксов на ложки`);
+  }
+  if (input.boxes.some((b) => b.wishes.exclude.length > settings.maxExclude)) {
+    throw new CheckoutError(`В пожеланиях можно исключить не больше ${settings.maxExclude} предметов`);
   }
 
   const products = await db.select({ name: schema.products.name }).from(schema.products);
@@ -71,6 +76,8 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     };
   });
 
+  const packs = await resolvePacks(input.packs);
+
   const method = await db.query.deliveryMethods.findFirst({
     where: and(eq(schema.deliveryMethods.id, input.deliveryMethodId), eq(schema.deliveryMethods.active, true)),
   });
@@ -84,7 +91,7 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
   const zone = zones.find((z) => z.id === input.deliveryZoneId);
   if (zones.length > 0 && !zone) throw new CheckoutError("Выберите регион доставки");
 
-  const subtotal = boxes.reduce((s, b) => s + b.price, 0);
+  const subtotal = boxes.reduce((s, b) => s + b.price, 0) + packs.reduce((s, p) => s + p.price * p.qty, 0);
   const deliveryPrice = method.price + (zone?.extra ?? 0);
 
   const [order] = await db
@@ -98,12 +105,32 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
       address: input.address,
       comment: input.comment,
       boxes,
+      packs,
       subtotal,
       deliveryPrice,
       total: subtotal + deliveryPrice,
     })
     .returning();
   return order;
+}
+
+// Checks ready-made boxes against the catalog: availability, stock and per-order limits.
+async function resolvePacks(lines: CheckoutInput["packs"]): Promise<OrderPack[]> {
+  if (lines.length === 0) return [];
+  const ids = [...new Set(lines.map((l) => l.packId))];
+  const rows = await db.select().from(schema.packs).where(inArray(schema.packs.id, ids));
+  return ids.map((id) => {
+    const qty = lines.filter((l) => l.packId === id).reduce((s, l) => s + l.qty, 0);
+    const pack = rows.find((r) => r.id === id);
+    if (!pack || !pack.available) throw new CheckoutError("Один из готовых боксов больше недоступен, обновите корзину");
+    if (pack.stock !== null && qty > pack.stock) {
+      throw new CheckoutError(
+        pack.stock === 0 ? `«${pack.title}» закончился` : `«${pack.title}»: осталось только ${pack.stock} шт.`,
+      );
+    }
+    if (qty > pack.maxPerOrder) throw new CheckoutError(`«${pack.title}»: не больше ${pack.maxPerOrder} шт. в заказе`);
+    return { packId: pack.id, title: pack.title, price: pack.price, qty };
+  });
 }
 
 function siteUrl() {
@@ -120,6 +147,9 @@ export async function startPayment(order: Order): Promise<string> {
     amount: b.price,
     subject: "commodity" as const,
   }));
+  for (const p of order.packs) {
+    items.push({ description: `${p.title} × ${p.qty}`, amount: p.price * p.qty, subject: "commodity" });
+  }
   if (order.deliveryPrice > 0) {
     items.push({ description: `Доставка ${order.deliveryMethod}`, amount: order.deliveryPrice, subject: "commodity" });
   }
@@ -151,7 +181,15 @@ export async function markPaid(orderId: string, paymentId: string | null): Promi
     .set({ status: "paid", paidAt: new Date(), ...(paymentId ? { paymentId } : {}) })
     .where(and(eq(schema.orders.id, orderId), eq(schema.orders.status, "pending_payment")))
     .returning();
-  if (order) await notifyPaid(order);
+  if (!order) return;
+  // Stock is reserved only once the order is paid.
+  for (const p of order.packs) {
+    await db
+      .update(schema.packs)
+      .set({ stock: sql`greatest(${schema.packs.stock} - ${p.qty}, 0)` })
+      .where(and(eq(schema.packs.id, p.packId), isNotNull(schema.packs.stock)));
+  }
+  await notifyPaid(order);
 }
 
 // Checks the payment status with YooKassa (used on the return page and by the webhook).
@@ -184,12 +222,13 @@ async function notifyPaid(order: Order) {
         w.comment ? `  📝 ${e(w.comment)}` : "",
       ].filter(Boolean);
     }),
+    ...order.packs.map((p) => `<b>Готовый бокс:</b> ${e(p.title)} × ${p.qty} — ${formatRub(p.price * p.qty)}`),
     "",
     `👤 ${e(order.customerName)}, ${e(order.phone)}${order.telegram ? `, ${e(order.telegram)}` : ""}`,
     `📦 ${e(order.deliveryMethod)}${order.deliveryZone ? ` (${e(order.deliveryZone)})` : ""}: ${e(order.address)}`,
     order.comment ? `💬 ${e(order.comment)}` : "",
     "",
-    `Боксы: ${formatRub(order.subtotal)} · Доставка: ${formatRub(order.deliveryPrice)}`,
+    `Товары: ${formatRub(order.subtotal)} · Доставка: ${formatRub(order.deliveryPrice)}`,
     `<b>Итого: ${formatRub(order.total)}</b>`,
     `${siteUrl()}/admin/orders/${order.id}`,
   ];

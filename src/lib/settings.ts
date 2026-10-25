@@ -25,6 +25,8 @@ export const settingsSchema = z.object({
   videoPrice: z.coerce.number().int().min(0).default(300),
   avgItems: z.coerce.number().int().min(0).default(22),
   maxBoxes: z.coerce.number().int().min(1).max(50).default(5),
+  // How many assortment items a customer may mark as "don't put in the box".
+  maxExclude: z.coerce.number().int().min(0).max(100).default(5),
 
   characters: z
     .array(z.string())
