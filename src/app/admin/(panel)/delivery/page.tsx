@@ -1,7 +1,7 @@
 import { asc } from "drizzle-orm";
 import { deleteDeliveryMethod, deleteDeliveryZone, saveDeliveryMethod, saveDeliveryZone } from "@/app/admin/actions";
 import { ActionForm, DeleteButton } from "@/components/admin/action-form";
-import { Card, Checkbox, Field, Input } from "@/components/admin/fields";
+import { AddSection, Card, Checkbox, Field, Input } from "@/components/admin/fields";
 import { db, schema } from "@/lib/db";
 import type { DeliveryMethod, DeliveryZone } from "@/lib/db/schema";
 
@@ -53,11 +53,11 @@ export default async function DeliveryPage() {
             </ActionForm>
           </Card>
         ))}
-        <Card title="Добавить службу">
+        <AddSection title="Добавить службу">
           <ActionForm action={saveDeliveryMethod} submitLabel="Добавить" resetOnSuccess>
             <MethodFields />
           </ActionForm>
-        </Card>
+        </AddSection>
       </section>
 
       <section className="space-y-3">
@@ -69,11 +69,11 @@ export default async function DeliveryPage() {
             </ActionForm>
           </Card>
         ))}
-        <Card title="Добавить регион">
+        <AddSection title="Добавить регион">
           <ActionForm action={saveDeliveryZone} submitLabel="Добавить" resetOnSuccess>
             <ZoneFields />
           </ActionForm>
-        </Card>
+        </AddSection>
       </section>
     </div>
   );

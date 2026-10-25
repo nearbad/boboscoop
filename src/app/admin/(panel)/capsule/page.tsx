@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { deleteCapsulePrize, saveCapsulePrize, updateCapsuleSettings } from "@/app/admin/actions";
 import { ActionForm, DeleteButton } from "@/components/admin/action-form";
-import { Card, Checkbox, Field, ImageInput, Input, Textarea } from "@/components/admin/fields";
+import { AddSection, Card, Checkbox, control, Field, ImageInput, Input, Textarea } from "@/components/admin/fields";
 import { RarityPill } from "@/components/capsule-opener";
 import { formatChance, RARITIES, RARITY } from "@/lib/capsule";
 import { getCapsuleStats, getPrizePool, isDrawable } from "@/lib/capsules";
@@ -17,7 +17,7 @@ function PrizeFields({ p }: { p?: CapsulePrize }) {
       <Field label="Приз" className="sm:col-span-2"><Input name="name" defaultValue={p?.name} required placeholder="Плюшевая Куроми" /></Field>
       <Field label="Эмодзи" hint="если нет фото"><Input name="emoji" defaultValue={p?.emoji ?? "🎁"} /></Field>
       <Field label="Редкость">
-        <select name="rarity" defaultValue={p?.rarity ?? "common"} className="w-full rounded-xl border-2 border-line bg-white px-3 py-2 text-sm">
+        <select name="rarity" defaultValue={p?.rarity ?? "common"} className={control}>
           {RARITIES.map((r) => (
             <option key={r} value={r}>{RARITY[r].short}</option>
           ))}
@@ -32,6 +32,16 @@ function PrizeFields({ p }: { p?: CapsulePrize }) {
         <ImageInput current={p?.imageUrl} />
         <Checkbox name="active" label="Участвует в розыгрыше" defaultChecked={p?.active ?? true} />
       </div>
+    </div>
+  );
+}
+
+function Stat({ label, value, children }: { label: string; value: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border-2 border-line bg-white p-3 sm:rounded-3xl sm:p-5">
+      <p className="text-xs font-bold leading-tight text-ink-soft sm:text-sm">{label}</p>
+      <p className="mt-1 text-lg font-black sm:text-2xl">{value}</p>
+      <p className="text-[11px] leading-tight text-ink-soft sm:text-xs">{children}</p>
     </div>
   );
 }
@@ -64,29 +74,17 @@ export default async function CapsuleAdminPage() {
         </p>
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <p className="text-sm font-bold text-ink-soft">Средняя себестоимость капсулы</p>
-          <p className="mt-1 text-2xl font-black">{formatRub(Math.round(expectedCost))}</p>
-          {boxPrice && expectedCost > 0 && (
-            <p className="text-xs text-ink-soft">≈ {((expectedCost / boxPrice) * 100).toFixed(1).replace(".", ",")}% от цены бокса</p>
-          )}
-        </Card>
-        <Card>
-          <p className="text-sm font-bold text-ink-soft">Выдано капсул</p>
-          <p className="mt-1 text-2xl font-black">{stats.issued}</p>
-          <p className="text-xs text-ink-soft">из них открыто покупателями: {stats.opened}</p>
-        </Card>
-        <Card>
-          <p className="text-sm font-bold text-ink-soft">Призов в розыгрыше</p>
-          <p className="mt-1 text-2xl font-black">{pool.prizes.filter(isDrawable).length}</p>
-          <p className="text-xs text-ink-soft">сумма весов: {total}</p>
-        </Card>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <Stat label="Себестоимость капсулы" value={formatRub(Math.round(expectedCost))}>
+          {boxPrice && expectedCost > 0 ? `≈ ${((expectedCost / boxPrice) * 100).toFixed(1).replace(".", ",")}% от цены бокса` : "в среднем"}
+        </Stat>
+        <Stat label="Выдано капсул" value={String(stats.issued)}>открыто: {stats.opened}</Stat>
+        <Stat label="Призов в игре" value={String(pool.prizes.filter(isDrawable).length)}>сумма весов: {total}</Stat>
       </div>
 
       <Card title="Настройки">
         <ActionForm action={updateCapsuleSettings}>
-          <div className="grid gap-3 sm:grid-cols-[auto_200px] sm:items-end">
+          <div className="grid gap-3 sm:grid-cols-[1fr_220px] sm:items-end">
             <Checkbox name="capsuleEnabled" label="Капсулы включены" defaultChecked={settings.capsuleEnabled} />
             <Field label="Капсула за бокс от, ложек">
               <Input name="capsuleMinSpoons" type="number" min={1} defaultValue={settings.capsuleMinSpoons} />
@@ -98,11 +96,11 @@ export default async function CapsuleAdminPage() {
         </ActionForm>
       </Card>
 
-      <Card title="Добавить приз">
+      <AddSection title="Добавить приз">
         <ActionForm action={saveCapsulePrize} submitLabel="Добавить" resetOnSuccess>
           <PrizeFields />
         </ActionForm>
-      </Card>
+      </AddSection>
 
       <ul className="space-y-2">
         {prizes.map((p) => (

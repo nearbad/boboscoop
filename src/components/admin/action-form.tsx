@@ -12,7 +12,7 @@ function Submit({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-full bg-teal px-5 py-2 text-sm font-extrabold text-white transition hover:bg-teal-deep disabled:opacity-50"
+      className="min-h-11 rounded-full bg-teal px-5 text-sm font-extrabold text-white transition hover:bg-teal-deep disabled:opacity-50"
     >
       {pending ? "Сохраняем…" : label}
     </button>
@@ -64,7 +64,7 @@ export function DeleteButton({ action, message = "Точно удалить?" }:
       onClick={(e) => {
         if (!confirm(message)) e.preventDefault();
       }}
-      className="rounded-full px-4 py-2 text-sm font-bold text-ink-soft hover:bg-pink-soft hover:text-ink"
+      className="min-h-11 rounded-full px-4 text-sm font-bold text-ink-soft hover:bg-pink-soft hover:text-ink"
     >
       Удалить
     </button>

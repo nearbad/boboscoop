@@ -23,7 +23,7 @@ export function PackCard({ pack }: { pack: Pack }) {
         )}
       </Link>
       <div className="flex flex-1 flex-col p-5">
-        <Link href={`/shop/${pack.slug}`} className="text-xl font-black hover:underline">{pack.title}</Link>
+        <Link href={`/shop/${pack.slug}`} className="py-1 text-xl font-black hover:underline">{pack.title}</Link>
         <p className="mt-1 text-sm text-ink-soft">
           {pack.itemsCount ? `${pack.itemsCount} предметов` : "Готовый набор"}
           {pack.stock !== null && pack.stock > 0 && pack.stock <= 5 ? ` · осталось ${pack.stock}` : ""}

@@ -28,13 +28,18 @@ export function GachaMachine({
   spinning = false,
   drop = null,
   idle = false,
+  compact = false,
 }: {
   spinning?: boolean;
   drop?: string | null;
   idle?: boolean;
+  // Smaller on phones, where the decorative machine would otherwise take a whole screen.
+  compact?: boolean;
 }) {
   return (
-    <div className={`relative mx-auto w-full max-w-[260px] ${idle ? "gacha-idle" : ""} ${spinning ? "gacha-spinning" : ""}`}>
+    <div
+      className={`relative mx-auto w-full ${compact ? "max-w-[190px] sm:max-w-[260px]" : "max-w-[260px]"} ${idle ? "gacha-idle" : ""} ${spinning ? "gacha-spinning" : ""}`}
+    >
       <svg viewBox="0 0 260 340" className="h-auto w-full" aria-hidden>
         <ellipse cx="130" cy="330" rx="96" ry="7" fill={INK} opacity="0.12" />
         <circle cx="130" cy="100" r="84" fill="#fff" fillOpacity="0.65" />

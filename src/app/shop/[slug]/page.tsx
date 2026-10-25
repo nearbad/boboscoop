@@ -27,7 +27,7 @@ export default async function PackPage({ params }: Props) {
     <>
       <SiteHeader />
       <main className="mx-auto max-w-6xl px-4 py-10">
-        <Link href="/shop" className="text-sm font-bold text-ink-soft">← Каталог</Link>
+        <Link href="/shop" className="tap text-sm font-bold text-ink-soft">← Каталог</Link>
         <div className="mt-4 grid gap-8 md:grid-cols-2">
           <PackGallery images={pack.images} title={pack.title} />
           <div>

@@ -1,13 +1,34 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { updateOrder } from "@/app/admin/actions";
-import { Card, Field, Textarea } from "@/components/admin/fields";
+import { Card, control, Field, Textarea } from "@/components/admin/fields";
 import { ORDER_STATUSES } from "@/lib/db/schema";
 import { getOrder, STATUS_LABELS, syncPayment } from "@/lib/orders";
-import { formatRub, spoonsLabel } from "@/lib/pricing";
+import { formatRub, spoonsLabel, type Wishes } from "@/lib/pricing";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { RarityPill } from "@/components/capsule-opener";
 import { getOrderCapsules } from "@/lib/capsules";
+
+// Only the wishes the customer actually filled in.
+function WishList({ wishes }: { wishes: Wishes }) {
+  const rows = [
+    ["💗 Персонажи", wishes.characters.join(", ")],
+    ["🎨 Цвета", wishes.colors.join(", ")],
+    ["🚫 Не класть", wishes.exclude.join(", ")],
+    ["📝 Пожелания", wishes.comment],
+  ].filter(([, value]) => value);
+  if (rows.length === 0) return <p className="text-sm text-ink-soft">Без пожеланий: на ваш вкус 🐾</p>;
+  return (
+    <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[140px_1fr] sm:gap-y-2">
+      {rows.map(([label, value]) => (
+        <div key={label} className="contents">
+          <dt className="font-bold text-ink-soft">{label}</dt>
+          <dd className="mb-2 whitespace-pre-line sm:mb-0">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 export default async function AdminOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const found = await getOrder((await params).id);
@@ -19,7 +40,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="space-y-4">
-      <Link href="/admin" className="text-sm font-bold text-ink-soft">← Все заказы</Link>
+      <Link href="/admin" className="tap text-sm font-bold text-ink-soft">← Все заказы</Link>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-black">Заказ #{order.number}</h1>
         <StatusBadge status={order.status} />
@@ -29,16 +50,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
         <div className="space-y-4">
           {order.boxes.map((b, i) => (
             <Card key={i} title={`Бокс ${i + 1}: ${spoonsLabel(b.spoons)}${b.video ? " + видео 🎥" : ""} · ${formatRub(b.price)}`}>
-              <dl className="grid gap-2 text-sm sm:grid-cols-[160px_1fr]">
-                <dt className="font-bold text-ink-soft">💗 Персонажи</dt>
-                <dd>{b.wishes.characters.join(", ") || "—"}</dd>
-                <dt className="font-bold text-ink-soft">🎨 Цвета</dt>
-                <dd>{b.wishes.colors.join(", ") || "—"}</dd>
-                <dt className="font-bold text-ink-soft">🚫 Не класть</dt>
-                <dd>{b.wishes.exclude.join(", ") || "—"}</dd>
-                <dt className="font-bold text-ink-soft">📝 Пожелания</dt>
-                <dd className="whitespace-pre-line">{b.wishes.comment || "—"}</dd>
-              </dl>
+              <WishList wishes={b.wishes} />
             </Card>
           ))}
           {order.boxes.some((b) => b.capsule) && (
@@ -75,6 +87,21 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
             </Card>
           )}
           <Card title="Покупатель и доставка">
+            <div className="mb-4 flex flex-wrap gap-2">
+              <a href={`tel:${order.phone}`} className="flex min-h-11 items-center rounded-full border-2 border-ink bg-white px-4 text-sm font-extrabold">
+                📞 Позвонить
+              </a>
+              {tg && (
+                <a
+                  href={`https://t.me/${tg}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex min-h-11 items-center rounded-full border-2 border-ink bg-white px-4 text-sm font-extrabold"
+                >
+                  ✈️ Написать в Telegram
+                </a>
+              )}
+            </div>
             <dl className="grid gap-2 text-sm sm:grid-cols-[160px_1fr]">
               <dt className="font-bold text-ink-soft">ФИО</dt>
               <dd>{order.customerName}</dd>
@@ -92,7 +119,22 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
           </Card>
         </div>
 
-        <div className="space-y-4">
+        {/* On phones the status form comes first: it's what gets changed most often. */}
+        <div className="order-first space-y-4 lg:order-none">
+          <Card title="Статус">
+            <form action={updateOrder} className="space-y-3">
+              <input type="hidden" name="id" value={order.id} />
+              <select name="status" defaultValue={order.status} className={`${control} min-h-11 font-bold`}>
+                {ORDER_STATUSES.map((s) => (
+                  <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                ))}
+              </select>
+              <Field label="Заметка для себя">
+                <Textarea name="adminNote" defaultValue={order.adminNote} placeholder="Трек-номер, что положили…" />
+              </Field>
+              <button className="min-h-11 rounded-full bg-teal px-5 text-sm font-extrabold text-white hover:bg-teal-deep">Сохранить</button>
+            </form>
+          </Card>
           <Card title="Оплата">
             <dl className="space-y-1 text-sm">
               <div className="flex justify-between"><dt>Товары</dt><dd className="font-bold">{formatRub(order.subtotal)}</dd></div>
@@ -102,20 +144,6 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
               <div className="flex justify-between text-ink-soft"><dt>Оплачен</dt><dd>{fmt(order.paidAt)}</dd></div>
               {order.paymentId && <div className="break-all pt-1 text-xs text-ink-soft">ЮKassa: {order.paymentId}</div>}
             </dl>
-          </Card>
-          <Card title="Статус">
-            <form action={updateOrder} className="space-y-3">
-              <input type="hidden" name="id" value={order.id} />
-              <select name="status" defaultValue={order.status} className="w-full rounded-xl border-2 border-line bg-white px-3 py-2 text-sm font-bold">
-                {ORDER_STATUSES.map((s) => (
-                  <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                ))}
-              </select>
-              <Field label="Заметка для себя">
-                <Textarea name="adminNote" defaultValue={order.adminNote} placeholder="Трек-номер, что положили…" />
-              </Field>
-              <button className="rounded-full bg-teal px-5 py-2 text-sm font-extrabold text-white hover:bg-teal-deep">Сохранить</button>
-            </form>
           </Card>
         </div>
       </div>

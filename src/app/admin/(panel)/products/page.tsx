@@ -1,6 +1,6 @@
 import { deleteProduct, saveProduct, toggleProductAvailable } from "@/app/admin/actions";
 import { ActionForm, DeleteButton } from "@/components/admin/action-form";
-import { Card, Checkbox, Field, ImageInput, Input, Textarea } from "@/components/admin/fields";
+import { AddSection, Checkbox, Field, ImageInput, Input, Textarea } from "@/components/admin/fields";
 import { getProducts } from "@/lib/catalog";
 import type { Product } from "@/lib/db/schema";
 
@@ -30,11 +30,11 @@ export default async function ProductsPage() {
           Товары показываются на сайте в блоке «Что может попасть в бокс». Предметы «в наличии» покупатель может отметить как «не класть».
         </p>
       </div>
-      <Card title="Добавить предмет">
+      <AddSection title="Добавить предмет">
         <ActionForm action={saveProduct} submitLabel="Добавить" resetOnSuccess>
           <ProductFields />
         </ActionForm>
-      </Card>
+      </AddSection>
       <ul className="space-y-2">
         {products.map((p) => (
           <li key={p.id} className="rounded-2xl border-2 border-line bg-white">
@@ -60,7 +60,7 @@ export default async function ProductsPage() {
             </details>
             <form action={toggleProductAvailable} className="-mt-2 px-3 pb-3">
               <input type="hidden" name="id" value={p.id} />
-              <button className={`rounded-full px-3 py-1 text-xs font-extrabold ${p.available ? "bg-teal-mist text-teal-deep" : "bg-lilac-soft text-ink-soft"}`}>
+              <button className={`min-h-9 rounded-full px-3 text-xs font-extrabold ${p.available ? "bg-teal-mist text-teal-deep" : "bg-lilac-soft text-ink-soft"}`}>
                 {p.available ? "✓ в наличии" : "нет в наличии"} · переключить
               </button>
             </form>

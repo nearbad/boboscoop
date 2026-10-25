@@ -23,8 +23,7 @@ export default async function Home() {
   const maxTier = Math.max(...settings.tiers.map((t) => t.spoons));
 
   return (
-    // Bottom padding on phones leaves room for the builder's fixed price bar.
-    <div className="pb-20 lg:pb-0">
+    <div>
       <SiteHeader />
       <main>
         {/* Hero */}
@@ -34,7 +33,7 @@ export default async function Home() {
               <p className="inline-flex items-center gap-2 rounded-full border-2 border-ink bg-white px-4 py-1.5 text-sm font-extrabold">
                 <span aria-hidden>🎀</span> Sanrio · Chiikawa
               </p>
-              <h1 className="mt-5 text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+              <h1 className="mt-5 text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl md:text-[2.75rem] lg:text-6xl">
                 {settings.heroTitle}
               </h1>
               <p className="mt-5 max-w-xl text-lg leading-relaxed text-ink-soft sm:text-xl">
@@ -60,7 +59,7 @@ export default async function Home() {
                 ))}
               </ul>
             </div>
-            <div className="relative mx-auto w-full max-w-md">
+            <div className="relative mx-auto w-full max-w-[220px] sm:max-w-sm md:max-w-md">
               <div className="absolute inset-6 rounded-full bg-teal-soft/60" aria-hidden />
               <Image
                 src="/bobotik/bobotik-hi.png"
@@ -80,20 +79,20 @@ export default async function Home() {
         {/* How it works */}
         <section className="mx-auto max-w-6xl px-4 py-16">
           <SectionTitle eyebrow="Как это работает" title="Подарок, собранный ложечками" />
-          <ol className="grid gap-4 md:grid-cols-4">
+          <ol className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             {[
               { icon: "🥄", title: "Выберите ложки", text: `1, 2 или ${settings.tiers.at(-1)?.spoons ?? 3} ложки сюрпризов, в среднем ~${settings.avgItems} предмета в боксе` },
               { icon: "💗", title: "Расскажите о себе", text: "Любимые персонажи, цвета и что точно не класть" },
               { icon: "💳", title: "Оплатите онлайн", text: "Бокс и доставка оплачиваются сразу, картой или по СБП" },
               { icon: "📦", title: "Получите бокс", text: "Отправим через Яндекс Маркет, Ozon или Wildberries" },
             ].map((s, i) => (
-              <li key={s.title} className="relative rounded-blob border-2 border-line bg-white p-6">
-                <span className="absolute right-5 top-4 text-5xl font-black text-pink-soft" aria-hidden>
+              <li key={s.title} className="relative rounded-3xl border-2 border-line bg-white p-4 sm:rounded-blob sm:p-6">
+                <span className="absolute right-4 top-3 text-4xl font-black text-pink-soft sm:right-5 sm:top-4 sm:text-5xl" aria-hidden>
                   {i + 1}
                 </span>
-                <span className="text-4xl" aria-hidden>{s.icon}</span>
-                <h3 className="mt-3 text-lg font-black">{s.title}</h3>
-                <p className="mt-1 text-ink-soft">{s.text}</p>
+                <span className="text-3xl sm:text-4xl" aria-hidden>{s.icon}</span>
+                <h3 className="mt-2 font-black leading-tight sm:mt-3 sm:text-lg">{s.title}</h3>
+                <p className="mt-1 text-sm text-ink-soft sm:text-base">{s.text}</p>
               </li>
             ))}
           </ol>
@@ -103,7 +102,7 @@ export default async function Home() {
         {capsule.minSpoons !== null && (
           <section className="mx-auto max-w-6xl px-4 pb-16">
             <div className="grid items-center gap-8 rounded-[2.5rem] border-2 border-ink bg-teal-mist p-6 shadow-pop sm:p-10 md:grid-cols-[280px_1fr]">
-              <GachaMachine idle />
+              <GachaMachine idle compact />
               <div>
                 <p className="text-sm font-extrabold uppercase tracking-widest text-pink-deep">Подарок к боксу</p>
                 <h2 className="mt-1 text-3xl font-black leading-tight sm:text-4xl">Капсула Боботика 🎁</h2>
@@ -122,7 +121,7 @@ export default async function Home() {
                   >
                     Собрать бокс {capsuleSpoonsPhrase(capsule.minSpoons, maxTier)}
                   </a>
-                  <Link href="/capsule" className="font-bold text-teal-deep underline underline-offset-2">
+                  <Link href="/capsule" className="tap font-bold text-teal-deep underline underline-offset-2">
                     Все призы и шансы →
                   </Link>
                 </div>
@@ -169,7 +168,7 @@ export default async function Home() {
               <SectionTitle eyebrow="Каталог" title="Готовые боксы">
                 Наборы с фиксированной ценой: просто положите в корзину.
               </SectionTitle>
-              <Link href="/shop" className="mb-8 font-bold text-teal-deep underline underline-offset-2">Весь каталог →</Link>
+              <Link href="/shop" className="tap mb-8 font-bold text-teal-deep underline underline-offset-2">Весь каталог →</Link>
             </div>
             <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {packs.slice(0, 3).map((p) => (
@@ -210,7 +209,7 @@ export default async function Home() {
               <ReviewWall reviews={reviews.slice(0, 6)} />
               {reviews.length > 6 && (
                 <p className="mt-4 text-center">
-                  <Link href="/reviews" className="font-bold text-teal-deep underline underline-offset-2">
+                  <Link href="/reviews" className="tap font-bold text-teal-deep underline underline-offset-2">
                     Все отзывы ({reviews.length}) →
                   </Link>
                 </p>

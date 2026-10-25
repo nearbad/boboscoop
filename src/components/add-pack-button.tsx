@@ -30,7 +30,7 @@ export function AddPackButton({ packId, limit, compact = false }: { packId: numb
           </button>
         </div>
         {!compact && (
-          <Link href="/cart" className="font-bold text-teal-deep underline underline-offset-2">В корзину →</Link>
+          <Link href="/cart" className="tap font-bold text-teal-deep underline underline-offset-2">В корзину →</Link>
         )}
       </div>
     );

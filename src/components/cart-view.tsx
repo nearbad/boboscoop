@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useCart, type CartBox } from "@/components/cart-context";
+import { useInView } from "@/components/use-in-view";
 import { WishesEditor, type WishOptions } from "@/components/wishes-editor";
 import { capsulesLabel } from "@/lib/capsule";
 import { boxPrice, boxesLabel, cartSubtotal, formatRub, spoonsLabel, type PricingSettings } from "@/lib/pricing";
@@ -26,21 +27,21 @@ function PackLine({ packId, qty, pack }: { packId: number; qty: number; pack: Pa
   }
   const over = qty > pack.limit;
   return (
-    <li className="flex flex-wrap items-center gap-4 rounded-blob border-2 border-line bg-white p-4">
+    <li className="grid grid-cols-[80px_1fr] items-center gap-x-4 gap-y-3 rounded-blob border-2 border-line bg-white p-4 sm:grid-cols-[80px_1fr_auto]">
       <Link href={`/shop/${pack.slug}`} className="relative grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-2xl bg-pink-soft text-3xl">
         {pack.image ? <Image src={pack.image} alt="" fill sizes="80px" className="object-cover" /> : <span aria-hidden>🎁</span>}
       </Link>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-extrabold text-pink-deep">Готовый бокс</p>
-        <Link href={`/shop/${pack.slug}`} className="text-lg font-black hover:underline">{pack.title}</Link>
+        <Link href={`/shop/${pack.slug}`} className="inline-block py-1 text-lg font-black leading-tight hover:underline">{pack.title}</Link>
         <p className="text-sm text-ink-soft">{formatRub(pack.price)} за шт.</p>
         {over && <p className="text-sm font-bold text-pink-deep">{pack.limit > 0 ? `Можно не больше ${pack.limit} шт.` : "Закончился"}</p>}
       </div>
-      <div className="flex items-center gap-3">
+      <div className="col-span-2 flex items-center justify-between gap-3 sm:col-span-1 sm:justify-end">
         <div className="flex items-center rounded-full border-2 border-line">
-          <button type="button" onClick={() => setPackQty(packId, qty - 1)} className="h-9 w-9 text-lg font-black" aria-label="Убрать один">−</button>
+          <button type="button" onClick={() => setPackQty(packId, qty - 1)} className="h-11 w-11 text-lg font-black" aria-label="Убрать один">−</button>
           <span className="min-w-6 text-center font-black">{qty}</span>
-          <button type="button" onClick={() => setPackQty(packId, qty + 1)} disabled={qty >= pack.limit} className="h-9 w-9 text-lg font-black disabled:opacity-30" aria-label="Добавить один">+</button>
+          <button type="button" onClick={() => setPackQty(packId, qty + 1)} disabled={qty >= pack.limit} className="h-11 w-11 text-lg font-black disabled:opacity-30" aria-label="Добавить один">+</button>
         </div>
         <span className="w-24 text-right text-lg font-black">{formatRub(pack.price * qty)}</span>
       </div>
@@ -77,15 +78,15 @@ function BoxCard({
 
   return (
     <li className="rounded-blob border-2 border-line bg-white p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-sm font-extrabold text-pink-deep">Бокс {index + 1}</p>
           <p className="text-lg font-black">
             {"🥄".repeat(box.spoons)} {spoonsLabel(box.spoons)}
             {box.video && " + видео 🎥"}
           </p>
         </div>
-        <p className="text-xl font-black">{price === null ? "—" : formatRub(price)}</p>
+        <p className="shrink-0 text-xl font-black">{price === null ? "—" : formatRub(price)}</p>
       </div>
       {price === null && (
         <p className="mt-2 text-sm font-bold text-pink-deep">Такого варианта больше нет, выберите количество ложек заново</p>
@@ -105,7 +106,7 @@ function BoxCard({
           id={`spoons-${box.id}`}
           value={box.spoons}
           onChange={(e) => update(box.id, { spoons: Number(e.target.value) })}
-          className="min-h-10 rounded-full border-2 border-line bg-cream px-3 text-sm font-bold"
+          className="min-h-11 rounded-full border-2 border-line bg-cream px-3 text-base font-bold sm:min-h-10"
         >
           {price === null && <option value={box.spoons}>—</option>}
           {pricing.tiers.map((t) => (
@@ -114,7 +115,7 @@ function BoxCard({
             </option>
           ))}
         </select>
-        <label className="flex min-h-10 cursor-pointer items-center gap-2 rounded-full border-2 border-line bg-cream px-3 text-sm font-bold">
+        <label className="flex min-h-11 cursor-pointer items-center sm:min-h-10 gap-2 rounded-full border-2 border-line bg-cream px-3 text-sm font-bold">
           <input
             type="checkbox"
             checked={box.video}
@@ -127,14 +128,14 @@ function BoxCard({
           type="button"
           onClick={() => setEditing((v) => !v)}
           aria-expanded={editing}
-          className="min-h-10 rounded-full border-2 border-line px-3 text-sm font-bold hover:border-pink"
+          className="min-h-11 rounded-full border-2 border-line px-3 text-sm font-bold hover:border-pink sm:min-h-10"
         >
           {editing ? "Готово" : "Изменить пожелания"}
         </button>
         <button
           type="button"
           onClick={() => remove(box.id)}
-          className="ml-auto min-h-10 rounded-full px-3 text-sm font-bold text-ink-soft hover:bg-pink-soft hover:text-ink"
+          className="ml-auto min-h-11 rounded-full px-3 sm:min-h-10 text-sm font-bold text-ink-soft hover:bg-pink-soft hover:text-ink"
         >
           Удалить
         </button>
@@ -183,6 +184,8 @@ export function CartView({
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const summaryRef = useRef<HTMLElement>(null);
+  const summaryOnScreen = useInView(summaryRef);
 
   if (!cart.hydrated) return <p className="mt-8 text-ink-soft">Загружаем корзину…</p>;
 
@@ -211,6 +214,7 @@ export function CartView({
   const delivery = method ? method.price + (zone?.extra ?? 0) : 0;
   const overLimit = cart.boxes.length > pricing.maxBoxes;
   const invalidBox = cart.boxes.some((b) => boxPrice(pricing, b) === null);
+  const blocked = submitting || overLimit || invalidBox || invalidPack || !acceptingOrders;
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -244,13 +248,13 @@ export function CartView({
   }
 
   return (
-    <form onSubmit={submit} className="mt-8 grid gap-6 lg:grid-cols-[1fr_380px] lg:items-start">
+    <form onSubmit={submit} className="mt-8 grid gap-6 pb-24 lg:grid-cols-[1fr_380px] lg:items-start lg:pb-0">
       <div className="space-y-6">
         {packLines.length > 0 && (
           <section>
             <div className="mb-3 flex items-baseline justify-between gap-3">
               <h2 className="text-xl font-black">Готовые боксы</h2>
-              <Link href="/shop" className="text-sm font-bold text-teal-deep underline underline-offset-2">каталог</Link>
+              <Link href="/shop" className="tap text-sm font-bold text-teal-deep underline underline-offset-2">каталог</Link>
             </div>
             <ul className="space-y-3">
               {packLines.map((l) => (
@@ -267,7 +271,7 @@ export function CartView({
                 {boxesLabel(cart.boxes.length)} <span className="text-base font-bold text-ink-soft">из {pricing.maxBoxes} возможных</span>
               </h2>
               {cart.boxes.length < pricing.maxBoxes && (
-                <Link href="/#builder" className="text-sm font-bold text-teal-deep underline underline-offset-2">
+                <Link href="/#builder" className="tap text-sm font-bold text-teal-deep underline underline-offset-2">
                   + ещё бокс
                 </Link>
               )}
@@ -292,7 +296,7 @@ export function CartView({
             {methods.map((m) => (
               <label
                 key={m.id}
-                className="cursor-pointer rounded-3xl border-2 border-line bg-cream p-4 transition has-checked:border-ink has-checked:bg-teal-mist"
+                className="flex cursor-pointer items-center justify-between gap-3 rounded-3xl border-2 border-line bg-cream px-4 py-3 transition has-checked:border-ink has-checked:bg-teal-mist sm:block sm:p-4"
               >
                 <input
                   type="radio"
@@ -369,7 +373,7 @@ export function CartView({
         </section>
       </div>
 
-      <aside className="rounded-blob border-2 border-ink bg-white p-6 shadow-pop lg:sticky lg:top-24">
+      <aside ref={summaryRef} className="rounded-blob border-2 border-ink bg-white p-6 shadow-pop lg:sticky lg:top-24">
         <h2 className="text-lg font-black">Ваш заказ</h2>
         <dl className="mt-4 space-y-2 text-sm">
           {cart.boxes.map((b, i) => (
@@ -426,13 +430,37 @@ export function CartView({
 
         <button
           type="submit"
-          disabled={submitting || overLimit || invalidBox || invalidPack || !acceptingOrders}
+          disabled={blocked}
           className="mt-5 w-full rounded-full border-2 border-ink bg-pink-deep px-6 py-3.5 text-lg font-black text-white shadow-pop transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? "Создаём заказ…" : "Перейти к оплате"}
         </button>
         <p className="mt-3 text-center text-xs text-ink-soft">Оплата картой или по СБП через ЮKassa</p>
       </aside>
+
+      {/* On phones and tablets the summary is at the very bottom: keep the total and the pay button in reach.
+          Submitting from here lets the browser jump to the first empty required field. */}
+      <div
+        inert={summaryOnScreen}
+        className={`fixed inset-x-0 bottom-0 z-30 border-t-2 border-ink bg-white px-4 py-3 transition-transform duration-300 lg:hidden ${
+          summaryOnScreen ? "translate-y-full" : "translate-y-0"
+        }`}
+      >
+        <div className="mx-auto flex max-w-2xl items-center gap-3">
+          <div>
+            <p className="text-xs font-bold text-ink-soft">К оплате{capsuleCount > 0 ? ` · 🎁 ×${capsuleCount}` : ""}</p>
+            <p className="text-xl font-black text-teal-deep">{formatRub(subtotal + delivery)}</p>
+          </div>
+          <button
+            type="submit"
+            disabled={blocked}
+            className="ml-auto rounded-full border-2 border-ink bg-pink-deep px-5 py-2.5 font-black text-white shadow-pop active:translate-y-1 active:shadow-none disabled:opacity-50"
+          >
+            {submitting ? "Создаём…" : "Оформить"}
+          </button>
+        </div>
+        {error && <p className="mx-auto mt-1 max-w-2xl text-xs font-bold text-pink-deep">{error}</p>}
+      </div>
     </form>
   );
 }

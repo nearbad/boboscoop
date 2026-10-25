@@ -47,7 +47,7 @@ export default async function CapsulePage() {
       <SiteHeader />
       <main className="mx-auto max-w-6xl px-4 py-10">
         <div className="grid items-center gap-10 md:grid-cols-[300px_1fr]">
-          <GachaMachine idle />
+          <GachaMachine idle compact />
           <div>
             <SectionTitle as="h1" eyebrow="Подарок к боксу" title="Капсула Боботика">
               К каждому боксу {phrase} — капсула с призом. Пустых капсул не бывает!

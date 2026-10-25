@@ -1,7 +1,7 @@
 import { asc } from "drizzle-orm";
 import { deleteReview, saveReview, uploadReviewScreenshots } from "@/app/admin/actions";
 import { ActionForm, DeleteButton } from "@/components/admin/action-form";
-import { Card, Checkbox, Field, ImageInput, Input, Textarea } from "@/components/admin/fields";
+import { AddSection, Card, Checkbox, Field, ImageInput, Input, Textarea } from "@/components/admin/fields";
 import { db, schema } from "@/lib/db";
 import type { Review } from "@/lib/db/schema";
 
@@ -38,11 +38,11 @@ export default async function ReviewsPage() {
           <input type="file" name="images" multiple required accept="image/jpeg,image/png,image/webp" className="block text-sm" />
         </ActionForm>
       </Card>
-      <Card title="Добавить текстовый отзыв">
+      <AddSection title="Добавить текстовый отзыв">
         <ActionForm action={saveReview} submitLabel="Добавить" resetOnSuccess>
           <ReviewFields />
         </ActionForm>
-      </Card>
+      </AddSection>
       {reviews.map((r) => (
         <Card key={r.id}>
           <ActionForm action={saveReview} extra={<DeleteButton action={deleteReview} />}>

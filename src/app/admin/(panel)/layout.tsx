@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { logout } from "@/app/admin/actions";
+import { AdminNav } from "@/components/admin/admin-nav";
 import { isDemoPayments } from "@/lib/yookassa";
 
 export const dynamic = "force-dynamic";
@@ -29,31 +30,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Image src="/icon.png" alt="" width={32} height={32} />
             Админка
           </Link>
-          <nav className="order-last flex w-full gap-1 overflow-x-auto pb-1 md:order-none md:w-auto md:pb-0">
-            {NAV.map((n) => (
-              <Link key={n.href} href={n.href} className="whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-bold text-ink-soft hover:bg-pink-soft hover:text-ink">
-                {n.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="ml-auto flex items-center gap-2">
-            <Link href="/" target="_blank" className="text-sm font-bold text-ink-soft underline underline-offset-2">Сайт ↗</Link>
+          <AdminNav items={NAV} />
+          <div className="ml-auto flex items-center gap-1">
+            <Link href="/" target="_blank" className="tap px-2 text-sm font-bold text-ink-soft underline underline-offset-2">Сайт ↗</Link>
             <form action={logout}>
-              <button className="rounded-full px-3 py-1.5 text-sm font-bold text-ink-soft hover:bg-pink-soft">Выйти</button>
+              <button className="min-h-11 rounded-full px-3 text-sm font-bold text-ink-soft hover:bg-pink-soft">Выйти</button>
             </form>
           </div>
         </div>
       </header>
       {(demo || !telegram) && (
-        <div className="mx-auto mt-4 max-w-6xl space-y-2 px-4 text-sm">
+        <div className="mx-auto mt-3 flex max-w-6xl flex-wrap gap-2 px-4 text-xs font-bold sm:text-sm">
           {demo && (
-            <p className="rounded-2xl bg-pink-soft p-3 font-bold">
-              Оплата в демо-режиме: ключи ЮKassa не заданы, заказы «оплачиваются» кнопкой без реальных денег.
+            <p className="rounded-full bg-pink-soft px-3 py-1.5" title="Ключи ЮKassa не заданы, заказы «оплачиваются» кнопкой без реальных денег">
+              💳 Оплата в демо-режиме
             </p>
           )}
           {!telegram && (
-            <p className="rounded-2xl bg-teal-mist p-3 font-bold">
-              Уведомления в Telegram выключены: задайте TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID.
+            <p className="rounded-full bg-teal-mist px-3 py-1.5" title="Задайте TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID">
+              🔕 Уведомления в Telegram выключены
             </p>
           )}
         </div>

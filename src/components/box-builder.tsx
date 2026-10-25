@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useCart } from "@/components/cart-context";
+import { useInView } from "@/components/use-in-view";
 import { WishesEditor, type WishOptions } from "@/components/wishes-editor";
 import { capsuleSpoonsPhrase } from "@/lib/capsule";
 import { boxPrice, boxesLabel, emptyWishes, formatRub, spoonsLabel, type Tier, type Wishes } from "@/lib/pricing";
@@ -38,6 +39,12 @@ export function BoxBuilder(props: BuilderProps) {
   const [video, setVideo] = useState(false);
   const [wishes, setWishes] = useState<Wishes>(emptyWishes);
   const [added, setAdded] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const summaryRef = useRef<HTMLElement>(null);
+  const builderOnScreen = useInView(rootRef);
+  const summaryOnScreen = useInView(summaryRef);
+  // The phone bar only appears while the builder is on screen and its own summary button isn't.
+  const showBar = builderOnScreen && !summaryOnScreen;
 
   const pricing = { tiers, videoPrice, maxBoxes };
   const price = boxPrice(pricing, { spoons, video }) ?? 0;
@@ -65,7 +72,7 @@ export function BoxBuilder(props: BuilderProps) {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_340px] lg:items-start">
+    <div ref={rootRef} className="grid gap-5 lg:grid-cols-[1fr_340px] lg:items-start">
       <div className="space-y-5">
         <Step n={1} title="Сколько ложек?">
           <div className="grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Количество ложек">
@@ -79,7 +86,7 @@ export function BoxBuilder(props: BuilderProps) {
                   role="radio"
                   aria-checked={active}
                   onClick={() => setSpoons(t.spoons)}
-                  className={`relative rounded-3xl border-2 p-4 text-left transition ${
+                  className={`relative flex items-center gap-3 rounded-3xl border-2 p-4 text-left transition sm:block ${
                     active ? "border-ink bg-pink-soft shadow-pop" : "border-line bg-cream hover:border-pink"
                   }`}
                 >
@@ -88,14 +95,16 @@ export function BoxBuilder(props: BuilderProps) {
                       выгода {formatRub(saving)}
                     </span>
                   )}
-                  <span className="block text-2xl tracking-tighter" aria-hidden>
+                  <span className="w-16 shrink-0 text-xl tracking-tighter sm:block sm:w-auto sm:text-2xl" aria-hidden>
                     {"🥄".repeat(t.spoons)}
                   </span>
-                  <span className="mt-2 block text-lg font-black">{spoonsLabel(t.spoons)}</span>
-                  <span className="block text-ink-soft">{formatRub(t.price)}</span>
+                  <span className="min-w-0 flex-1 sm:mt-2 sm:block">
+                    <span className="block text-lg font-black">{spoonsLabel(t.spoons)}</span>
+                    <span className="block text-ink-soft">{formatRub(t.price)}</span>
+                  </span>
                   {withCapsule(t.spoons) && (
-                    <span className="mt-2 inline-block rounded-full bg-white px-2.5 py-0.5 text-xs font-extrabold text-pink-deep ring-1 ring-pink">
-                      🎁 + капсула с призом
+                    <span className="shrink-0 rounded-full bg-white px-2.5 py-0.5 text-xs font-extrabold text-pink-deep ring-1 ring-pink sm:mt-2 sm:inline-block">
+                      🎁 + капсула<span className="hidden sm:inline"> с призом</span>
                     </span>
                   )}
                 </button>
@@ -108,11 +117,11 @@ export function BoxBuilder(props: BuilderProps) {
               <button
                 type="button"
                 onClick={() => setSpoons(capsuleTier.spoons)}
-                className="rounded-full border-2 border-ink bg-white px-3 py-1 text-xs font-black"
+                className="min-h-9 rounded-full border-2 border-ink bg-white px-3 py-1 text-xs font-black"
               >
                 Выбрать {spoonsLabel(capsuleTier.spoons)}
               </button>
-              <Link href="/capsule" className="text-xs text-ink-soft underline underline-offset-2">
+              <Link href="/capsule" className="tap text-xs text-ink-soft underline underline-offset-2">
                 что это?
               </Link>
             </div>
@@ -139,27 +148,38 @@ export function BoxBuilder(props: BuilderProps) {
         </Step>
       </div>
 
-      {/* On phones the summary sits below the long wishes step, so keep price and button in reach. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t-2 border-ink bg-white px-4 py-3 lg:hidden">
+      {/* On phones and tablets the summary sits below the long wishes step, so keep price and button in reach. */}
+      <div
+        inert={!showBar}
+        className={`fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t-2 border-ink bg-white px-4 py-3 transition-transform duration-300 lg:hidden ${
+          showBar ? "translate-y-0" : "translate-y-full"
+        }`}
+      >
         <div className="min-w-0">
-          <p className="truncate text-xs font-bold text-ink-soft">
-            {spoonsLabel(spoons)}
-            {video ? " + видео" : ""}
-            {withCapsule(spoons) ? " + 🎁" : ""}
-          </p>
+          {added && cart.hydrated ? (
+            <Link href="/cart" className="block truncate text-xs font-extrabold text-teal-deep underline underline-offset-2">
+              ✓ В корзине ({cart.count}) · оформить
+            </Link>
+          ) : (
+            <p className="truncate text-xs font-bold text-ink-soft">
+              {spoonsLabel(spoons)}
+              {video ? " + видео" : ""}
+              {withCapsule(spoons) ? " + 🎁" : ""}
+            </p>
+          )}
           <p className="text-xl font-black text-teal-deep">{formatRub(price)}</p>
         </div>
         <button
           type="button"
           onClick={addToCart}
           disabled={cartFull}
-          className="ml-auto rounded-full border-2 border-ink bg-pink-deep px-5 py-2.5 font-black text-white shadow-pop active:translate-y-1 active:shadow-none disabled:opacity-50"
+          className="ml-auto shrink-0 whitespace-nowrap rounded-full border-2 border-ink bg-pink-deep px-5 py-2.5 font-black text-white shadow-pop active:translate-y-1 active:shadow-none disabled:opacity-50"
         >
-          {cartFull ? "Корзина полна" : added ? "Ещё в корзину" : "В корзину"}
+          {cartFull ? "Корзина полна" : added ? "+ ещё бокс" : "В корзину"}
         </button>
       </div>
 
-      <aside className="rounded-blob border-2 border-ink bg-white p-6 shadow-pop lg:sticky lg:top-24">
+      <aside ref={summaryRef} className="rounded-blob border-2 border-ink bg-white p-6 shadow-pop lg:sticky lg:top-24">
         <h3 className="text-lg font-black">Ваш бокс</h3>
         <dl className="mt-4 space-y-2 text-sm">
           <div className="flex justify-between gap-3">

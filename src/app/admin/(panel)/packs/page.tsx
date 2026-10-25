@@ -1,6 +1,6 @@
 import { deletePack, savePack } from "@/app/admin/actions";
 import { ActionForm, DeleteButton } from "@/components/admin/action-form";
-import { Card, Checkbox, Field, Input, Textarea } from "@/components/admin/fields";
+import { AddSection, Checkbox, Field, Input, Textarea } from "@/components/admin/fields";
 import { getPacks } from "@/lib/catalog";
 import type { Pack } from "@/lib/db/schema";
 import { formatRub } from "@/lib/pricing";
@@ -54,11 +54,11 @@ export default async function PacksPage() {
           Наборы с фиксированной ценой. Показываются в «Каталоге» и на главной, покупаются без конструктора. Остаток уменьшается после оплаты.
         </p>
       </div>
-      <Card title="Добавить готовый бокс">
+      <AddSection title="Добавить готовый бокс">
         <ActionForm action={savePack} submitLabel="Добавить" resetOnSuccess>
           <PackFields />
         </ActionForm>
-      </Card>
+      </AddSection>
       {packs.map((p) => (
         <details key={p.id} className="rounded-3xl border-2 border-line bg-white">
           <summary className="flex cursor-pointer list-none items-center gap-3 p-4 [&::-webkit-details-marker]:hidden">

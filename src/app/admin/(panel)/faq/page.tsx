@@ -1,7 +1,7 @@
 import { asc } from "drizzle-orm";
 import { deleteFaq, saveFaq } from "@/app/admin/actions";
 import { ActionForm, DeleteButton } from "@/components/admin/action-form";
-import { Card, Checkbox, Field, Input, Textarea } from "@/components/admin/fields";
+import { AddSection, Card, Checkbox, Field, Input, Textarea } from "@/components/admin/fields";
 import { db, schema } from "@/lib/db";
 import type { FaqItem } from "@/lib/db/schema";
 
@@ -29,11 +29,11 @@ export default async function FaqPage() {
           </ActionForm>
         </Card>
       ))}
-      <Card title="Добавить вопрос">
+      <AddSection title="Добавить вопрос">
         <ActionForm action={saveFaq} submitLabel="Добавить" resetOnSuccess>
           <FaqFields />
         </ActionForm>
-      </Card>
+      </AddSection>
     </div>
   );
 }

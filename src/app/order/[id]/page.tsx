@@ -106,7 +106,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         <div className="mt-8 text-center">
           <p className="font-bold">Следите за новостями и видео с заказами:</p>
           <SocialLinks settings={settings} className="mt-3 justify-center" />
-          <Link href="/" className="mt-6 inline-block text-sm font-bold text-teal-deep underline underline-offset-2">
+          <Link href="/" className="tap mt-4 text-sm font-bold text-teal-deep underline underline-offset-2">
             ← На главную
           </Link>
         </div>

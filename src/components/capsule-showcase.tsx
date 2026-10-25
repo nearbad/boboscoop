@@ -50,10 +50,12 @@ export function RecentWins({ wins }: { wins: Capsule[] }) {
         <li key={w.id} className="flex items-center gap-3 rounded-2xl bg-white p-2.5 pr-4">
           <PrizeIcon prize={{ emoji: w.prizeEmoji, imageUrl: w.prizeImageUrl, rarity: w.rarity }} size="sm" />
           <span className="min-w-0 flex-1">
-            <span className="block truncate font-extrabold leading-tight">{w.prizeName}</span>
-            <RarityPill rarity={w.rarity} />
+            <span className="block font-extrabold leading-tight">{w.prizeName}</span>
+            <span className="mt-0.5 flex flex-wrap items-center gap-x-2">
+              <RarityPill rarity={w.rarity} />
+              <span className="text-xs text-ink-soft">{w.openedAt ? timeAgo(w.openedAt, now) : ""}</span>
+            </span>
           </span>
-          <span className="shrink-0 text-xs text-ink-soft">{w.openedAt ? timeAgo(w.openedAt, now) : ""}</span>
         </li>
       ))}
     </ul>

@@ -163,3 +163,10 @@
     opacity: 0;
   }
 }
+
+/* Standalone text links get a finger-sized tap area. */
+@utility tap {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+}

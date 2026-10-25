@@ -169,7 +169,7 @@ export function CapsuleOpener({ orderId, items: initial }: { orderId: string; it
             </ul>
           )}
           <p className="mt-5 text-sm">
-            <Link href="/capsule" className="font-bold text-teal-deep underline underline-offset-2">
+            <Link href="/capsule" className="tap font-bold text-teal-deep underline underline-offset-2">
               Какие призы бывают и шансы
             </Link>
           </p>

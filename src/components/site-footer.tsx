@@ -45,8 +45,8 @@ export function SiteFooter({ settings }: { settings: Settings }) {
             </p>
           )}
           <p className="flex flex-wrap gap-x-4 gap-y-1 md:justify-end">
-            <Link href="/offer" className="underline underline-offset-2">Публичная оферта</Link>
-            <Link href="/privacy" className="underline underline-offset-2">Политика конфиденциальности</Link>
+            <Link href="/offer" className="tap underline underline-offset-2">Публичная оферта</Link>
+            <Link href="/privacy" className="tap underline underline-offset-2">Политика конфиденциальности</Link>
           </p>
           <p className="text-xs">
             BoboScoop не связан с Sanrio Co., Ltd. и правообладателями Chiikawa. Товары подбираются вручную.

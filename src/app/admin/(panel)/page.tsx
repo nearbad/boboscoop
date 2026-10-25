@@ -1,10 +1,21 @@
 import { desc, eq, sql } from "drizzle-orm";
 import Link from "next/link";
 import { db, schema } from "@/lib/db";
-import { ORDER_STATUSES, type OrderStatus } from "@/lib/db/schema";
+import { ORDER_STATUSES, type Order, type OrderStatus } from "@/lib/db/schema";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { STATUS_LABELS } from "@/lib/orders";
 import { formatRub, spoonsLabel } from "@/lib/pricing";
+
+function composition(o: Order) {
+  return [
+    ...o.boxes.map((b) => `${spoonsLabel(b.spoons)}${b.video ? " 🎥" : ""}${b.capsule ? " 🎰" : ""}`),
+    ...o.packs.map((p) => `🎁 ${p.title}${p.qty > 1 ? ` × ${p.qty}` : ""}`),
+  ].join(", ");
+}
+
+function formatDate(d: Date) {
+  return d.toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Moscow" });
+}
 
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const { status } = await searchParams;
@@ -28,11 +39,11 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
     <div>
       <h1 className="text-2xl font-black">Заказы</h1>
       <div className="mt-4 flex flex-wrap gap-2">
-        <Link href="/admin" className={`rounded-full px-3 py-1.5 text-sm font-bold ${!filter ? "bg-ink text-white" : "bg-white"}`}>
+        <Link href="/admin" className={`flex min-h-10 items-center gap-1 rounded-full px-3 text-sm font-bold ${!filter ? "bg-ink text-white" : "bg-white"}`}>
           Все
         </Link>
         {ORDER_STATUSES.map((s) => (
-          <Link key={s} href={`/admin?status=${s}`} className={`rounded-full px-3 py-1.5 text-sm font-bold ${filter === s ? "bg-ink text-white" : "bg-white"}`}>
+          <Link key={s} href={`/admin?status=${s}`} className={`flex min-h-10 items-center gap-1 rounded-full px-3 text-sm font-bold ${filter === s ? "bg-ink text-white" : "bg-white"}`}>
             {STATUS_LABELS[s]} <span className="opacity-60">{count(s)}</span>
           </Link>
         ))}
@@ -41,44 +52,61 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       {orders.length === 0 ? (
         <p className="mt-8 rounded-3xl bg-white p-8 text-center text-ink-soft">Заказов пока нет</p>
       ) : (
-        <div className="mt-4 overflow-x-auto rounded-3xl border-2 border-line bg-white">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="border-b-2 border-line text-xs uppercase tracking-wider text-ink-soft">
-              <tr>
-                <th className="p-3">№</th>
-                <th className="p-3">Дата</th>
-                <th className="p-3">Покупатель</th>
-                <th className="p-3">Состав</th>
-                <th className="p-3">Доставка</th>
-                <th className="p-3 text-right">Сумма</th>
-                <th className="p-3">Статус</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((o) => (
-                <tr key={o.id} className="border-b border-line last:border-0 hover:bg-cream">
-                  <td className="p-3 font-black">
-                    <Link href={`/admin/orders/${o.id}`} className="underline underline-offset-2">#{o.number}</Link>
-                  </td>
-                  <td className="p-3 text-ink-soft">{o.createdAt.toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Moscow" })}</td>
-                  <td className="p-3">
-                    <span className="font-bold">{o.customerName}</span>
-                    <span className="block text-xs text-ink-soft">{o.telegram || o.phone}</span>
-                  </td>
-                  <td className="p-3">
-                    {[
-                      ...o.boxes.map((b) => `${spoonsLabel(b.spoons)}${b.video ? " 🎥" : ""}${b.capsule ? " 🎰" : ""}`),
-                      ...o.packs.map((p) => `🎁 ${p.title}${p.qty > 1 ? ` × ${p.qty}` : ""}`),
-                    ].join(", ")}
-                  </td>
-                  <td className="p-3">{o.deliveryMethod}</td>
-                  <td className="p-3 text-right font-bold">{formatRub(o.total)}</td>
-                  <td className="p-3"><StatusBadge status={o.status} /></td>
+        <>
+          {/* Phones: one tappable card per order instead of a sideways-scrolling table. */}
+          <ul className="mt-4 space-y-2 md:hidden">
+            {orders.map((o) => (
+              <li key={o.id}>
+                <Link href={`/admin/orders/${o.id}`} className="block rounded-3xl border-2 border-line bg-white p-4 active:bg-cream">
+                  <span className="flex items-center justify-between gap-3">
+                    <span className="font-black">#{o.number} · {o.customerName}</span>
+                    <span className="shrink-0 font-black">{formatRub(o.total)}</span>
+                  </span>
+                  <span className="mt-1 block text-sm text-ink-soft">{composition(o)}</span>
+                  <span className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <StatusBadge status={o.status} />
+                    <span className="text-xs text-ink-soft">
+                      {formatDate(o.createdAt)} · {o.deliveryMethod}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 hidden overflow-x-auto rounded-3xl border-2 border-line bg-white md:block">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead className="border-b-2 border-line text-xs uppercase tracking-wider text-ink-soft">
+                <tr>
+                  <th className="p-3">№</th>
+                  <th className="p-3">Дата</th>
+                  <th className="p-3">Покупатель</th>
+                  <th className="p-3">Состав</th>
+                  <th className="p-3">Доставка</th>
+                  <th className="p-3 text-right">Сумма</th>
+                  <th className="p-3">Статус</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {orders.map((o) => (
+                  <tr key={o.id} className="border-b border-line last:border-0 hover:bg-cream">
+                    <td className="p-3 font-black">
+                      <Link href={`/admin/orders/${o.id}`} className="tap px-2 underline underline-offset-2">#{o.number}</Link>
+                    </td>
+                    <td className="p-3 text-ink-soft">{formatDate(o.createdAt)}</td>
+                    <td className="p-3">
+                      <span className="font-bold">{o.customerName}</span>
+                      <span className="block text-xs text-ink-soft">{o.telegram || o.phone}</span>
+                    </td>
+                    <td className="p-3">{composition(o)}</td>
+                    <td className="p-3">{o.deliveryMethod}</td>
+                    <td className="p-3 text-right font-bold">{formatRub(o.total)}</td>
+                    <td className="p-3"><StatusBadge status={o.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
