@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/components/cart-context";
 import { WishesEditor, type WishOptions } from "@/components/wishes-editor";
+import { capsuleSpoonsPhrase } from "@/lib/capsule";
 import { boxPrice, boxesLabel, emptyWishes, formatRub, spoonsLabel, type Tier, type Wishes } from "@/lib/pricing";
 
 export type BuilderProps = {
@@ -14,6 +15,8 @@ export type BuilderProps = {
   acceptingOrders: boolean;
   closedMessage: string;
   wishOptions: WishOptions;
+  // Boxes with at least this many spoons come with a "Капсула Боботика"; null = capsules are off.
+  capsuleMinSpoons: number | null;
 };
 
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
@@ -29,7 +32,7 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
 }
 
 export function BoxBuilder(props: BuilderProps) {
-  const { tiers, videoPrice, videoNote, maxBoxes, acceptingOrders, closedMessage, wishOptions } = props;
+  const { tiers, videoPrice, videoNote, maxBoxes, acceptingOrders, closedMessage, wishOptions, capsuleMinSpoons } = props;
   const cart = useCart();
   const [spoons, setSpoons] = useState(tiers[tiers.length - 1]?.spoons ?? 1);
   const [video, setVideo] = useState(false);
@@ -40,6 +43,9 @@ export function BoxBuilder(props: BuilderProps) {
   const price = boxPrice(pricing, { spoons, video }) ?? 0;
   const single = tiers.find((t) => t.spoons === 1)?.price;
   const cartFull = cart.hydrated && cart.boxes.length >= maxBoxes;
+  const withCapsule = (n: number) => capsuleMinSpoons !== null && n >= capsuleMinSpoons;
+  const capsuleTier = tiers.find((t) => withCapsule(t.spoons));
+  const maxTier = Math.max(...tiers.map((t) => t.spoons));
 
   function addToCart() {
     if (cartFull) return;
@@ -87,10 +93,30 @@ export function BoxBuilder(props: BuilderProps) {
                   </span>
                   <span className="mt-2 block text-lg font-black">{spoonsLabel(t.spoons)}</span>
                   <span className="block text-ink-soft">{formatRub(t.price)}</span>
+                  {withCapsule(t.spoons) && (
+                    <span className="mt-2 inline-block rounded-full bg-white px-2.5 py-0.5 text-xs font-extrabold text-pink-deep ring-1 ring-pink">
+                      🎁 + капсула с призом
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
+          {capsuleTier && capsuleMinSpoons !== null && !withCapsule(spoons) && (
+            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-pink-soft p-3 text-sm font-bold">
+              <span>🎁 К боксу {capsuleSpoonsPhrase(capsuleMinSpoons, maxTier)} — Капсула Боботика с призом в подарок</span>
+              <button
+                type="button"
+                onClick={() => setSpoons(capsuleTier.spoons)}
+                className="rounded-full border-2 border-ink bg-white px-3 py-1 text-xs font-black"
+              >
+                Выбрать {spoonsLabel(capsuleTier.spoons)}
+              </button>
+              <Link href="/capsule" className="text-xs text-ink-soft underline underline-offset-2">
+                что это?
+              </Link>
+            </div>
+          )}
         </Step>
 
         <Step n={2} title="Видео со сборкой">
@@ -119,6 +145,7 @@ export function BoxBuilder(props: BuilderProps) {
           <p className="truncate text-xs font-bold text-ink-soft">
             {spoonsLabel(spoons)}
             {video ? " + видео" : ""}
+            {withCapsule(spoons) ? " + 🎁" : ""}
           </p>
           <p className="text-xl font-black text-teal-deep">{formatRub(price)}</p>
         </div>
@@ -143,6 +170,12 @@ export function BoxBuilder(props: BuilderProps) {
             <div className="flex justify-between gap-3">
               <dt className="text-ink-soft">Видео</dt>
               <dd className="font-bold">+{formatRub(videoPrice)}</dd>
+            </div>
+          )}
+          {withCapsule(spoons) && (
+            <div className="flex justify-between gap-3">
+              <dt className="text-ink-soft">🎁 Капсула Боботика</dt>
+              <dd className="font-bold text-pink-deep">в подарок</dd>
             </div>
           )}
           {wishes.characters.length + wishes.colors.length + wishes.exclude.length > 0 && (

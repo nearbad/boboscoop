@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CapsuleOpener } from "@/components/capsule-opener";
 import { PayButton } from "@/components/pay-button";
 import { SiteFooter, SocialLinks } from "@/components/site-footer";
 import { SiteHeader } from "@/components/header";
+import { capsulesLabel } from "@/lib/capsule";
+import { getOrderCapsules, toRevealed } from "@/lib/capsules";
 import { getOrder, STATUS_LABELS, syncPayment } from "@/lib/orders";
 import { formatRub, spoonsLabel } from "@/lib/pricing";
 import { getSettings } from "@/lib/settings";
@@ -18,6 +21,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   if (!found) notFound();
   const [order, settings] = await Promise.all([syncPayment(found), getSettings()]);
   const pending = order.status === "pending_payment";
+  const capsules = pending || order.status === "cancelled" ? [] : await getOrderCapsules(order.id);
+  const earned = order.boxes.filter((b) => b.capsule).length;
 
   return (
     <>
@@ -48,9 +53,20 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           {pending && (
             <div className="mx-auto mt-6 max-w-xs">
               <PayButton orderId={order.id} demo={isDemoPayments()} />
+              {earned > 0 && (
+                <p className="mt-4 text-sm font-bold text-pink-deep">
+                  🎁 В заказе {capsulesLabel(earned)} Боботика: откроете сразу после оплаты
+                </p>
+              )}
             </div>
           )}
         </div>
+
+        {capsules.length > 0 && (
+          <div className="mt-6">
+            <CapsuleOpener orderId={order.id} items={capsules.map((c) => ({ id: c.id, prize: c.openedAt ? toRevealed(c) : null }))} />
+          </div>
+        )}
 
         <section className="mt-6 rounded-blob border-2 border-line bg-white p-6">
           <h2 className="text-lg font-black">Состав заказа</h2>
@@ -60,6 +76,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                 <span>
                   <span className="font-bold">Бокс {i + 1}:</span> {spoonsLabel(b.spoons)}
                   {b.video ? " + видео" : ""}
+                  {b.capsule ? " + 🎁 капсула" : ""}
                 </span>
                 <span className="font-bold">{formatRub(b.price)}</span>
               </li>

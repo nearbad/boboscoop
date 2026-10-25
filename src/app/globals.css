@@ -65,3 +65,101 @@
   .animate-float, .animate-pop { animation: none; }
   html { scroll-behavior: auto; }
 }
+
+/* Капсула Боботика: gacha machine and capsule reveal */
+.gacha-crank,
+.gacha-balls,
+.gacha-drop {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes gacha-crank {
+  to { transform: rotate(360deg); }
+}
+.gacha-spinning .gacha-crank {
+  animation: gacha-crank 0.55s ease-in-out 2;
+}
+@keyframes gacha-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  20% { transform: translate(-3px, 1px) rotate(-2deg); }
+  40% { transform: translate(3px, -2px) rotate(2deg); }
+  60% { transform: translate(-2px, 2px) rotate(-1deg); }
+  80% { transform: translate(2px, -1px) rotate(1deg); }
+}
+.gacha-spinning .gacha-balls {
+  animation: gacha-shake 0.25s linear 4;
+}
+@keyframes gacha-drop {
+  0% { transform: translateY(-26px) scale(0.6); opacity: 0; }
+  40% { transform: translateY(4px) scale(1); opacity: 1; }
+  60% { transform: translateY(-6px); }
+  80% { transform: translateY(2px); }
+  100% { transform: translateY(0); }
+}
+.gacha-drop {
+  animation: gacha-drop 0.7s ease-out both;
+}
+@keyframes gacha-idle {
+  0%, 100% { transform: rotate(-1.5deg); }
+  50% { transform: rotate(1.5deg); }
+}
+.gacha-idle {
+  animation: gacha-idle 3.5s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+@keyframes capsule-pop {
+  /* starts from the machine's chute */
+  from { transform: translate(-42px, 116px) scale(0.27); }
+  to { transform: translate(0, 0) scale(1); }
+}
+@keyframes capsule-wobble {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-12deg); }
+  75% { transform: rotate(12deg); }
+}
+.capsule-big {
+  animation: capsule-pop 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) both, capsule-wobble 0.3s ease-in-out 0.45s 3;
+}
+@keyframes capsule-top {
+  to { transform: translate(-46px, -80px) rotate(-35deg); opacity: 0; }
+}
+@keyframes capsule-bottom {
+  to { transform: translate(46px, 70px) rotate(25deg); opacity: 0; }
+}
+.capsule-top {
+  animation: capsule-top 0.5s ease-in 1.4s forwards;
+}
+.capsule-bottom {
+  animation: capsule-bottom 0.5s ease-in 1.4s forwards;
+}
+@keyframes prize-in {
+  0% { transform: scale(0.4); opacity: 0; }
+  70% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.prize-in {
+  animation: prize-in 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes confetti {
+  from { transform: translate(0, 0) rotate(0); opacity: 1; }
+  to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; }
+}
+.confetti-piece {
+  animation: confetti 1.3s cubic-bezier(0.1, 0.7, 0.3, 1) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gacha-spinning .gacha-crank,
+  .gacha-spinning .gacha-balls,
+  .gacha-drop,
+  .gacha-idle,
+  .capsule-big,
+  .prize-in,
+  .confetti-piece {
+    animation: none;
+  }
+  .capsule-top,
+  .capsule-bottom {
+    animation: none;
+    opacity: 0;
+  }
+}

@@ -28,6 +28,21 @@ export const settingsSchema = z.object({
   // How many assortment items a customer may mark as "don't put in the box".
   maxExclude: z.coerce.number().int().min(0).max(100).default(5),
 
+  // "Капсула Боботика": one capsule with a prize for every box of at least capsuleMinSpoons.
+  capsuleEnabled: z.boolean().default(true),
+  capsuleMinSpoons: z.coerce.number().int().min(1).max(20).default(3),
+  capsuleRules: z
+    .string()
+    .default(
+      [
+        "Капсула Боботика — бесплатный подарок к каждому боксу {spoons}. Её нельзя купить отдельно, и цена бокса из-за неё не меняется.",
+        "В каждой капсуле есть приз, пустых капсул не бывает.",
+        "Приз определяется случайно в момент оплаты заказа. Шансы всех призов указаны на этой странице.",
+        "Открыть капсулу можно на странице заказа после оплаты, а приз мы положим в ту же посылку.",
+        "Призы не обмениваются на деньги. Если выпавший приз закончится, заменим его равноценным.",
+      ].join("\n"),
+    ),
+
   characters: z
     .array(z.string())
     .default([

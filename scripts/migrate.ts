@@ -5,7 +5,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import * as schema from "../src/lib/db/schema";
-import { seedDeliveryMethods, seedDeliveryZones, seedFaq, seedProducts, seedReviews } from "./seed-data";
+import { seedCapsulePrizes, seedDeliveryMethods, seedDeliveryZones, seedFaq, seedProducts, seedReviews } from "./seed-data";
 
 async function main() {
   const url = process.env.DATABASE_URL;
@@ -25,6 +25,7 @@ async function main() {
     [schema.deliveryZones, seedDeliveryZones],
     [schema.faq, seedFaq],
     [schema.reviews, seedReviews],
+    [schema.capsulePrizes, seedCapsulePrizes],
   ] as const;
   for (const [table, rows] of seeds) {
     const existing = await db.select().from(table).limit(1);

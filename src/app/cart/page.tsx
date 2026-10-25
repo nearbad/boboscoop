@@ -4,6 +4,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/header";
 import { packLimit } from "@/components/pack-card";
 import { getDelivery, getPacks, getProducts } from "@/lib/catalog";
+import { capsuleMinSpoons } from "@/lib/capsules";
 import { getSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +12,7 @@ export const metadata: Metadata = { title: "Корзина · BoboScoop" };
 
 export default async function CartPage() {
   const [settings, delivery, products, packs] = await Promise.all([getSettings(), getDelivery(), getProducts(), getPacks()]);
+  const capsuleFrom = await capsuleMinSpoons(settings);
   return (
     <>
       <SiteHeader />
@@ -19,6 +21,7 @@ export default async function CartPage() {
         <CartView
           pricing={{ tiers: settings.tiers, videoPrice: settings.videoPrice, maxBoxes: settings.maxBoxes }}
           acceptingOrders={settings.acceptingOrders}
+          capsuleMinSpoons={capsuleFrom}
           closedMessage={settings.closedMessage}
           methods={delivery.methods.map(({ id, name, price, note }) => ({ id, name, price, note }))}
           packs={packs.map((p) => ({ id: p.id, slug: p.slug, title: p.title, price: p.price, image: p.images[0] ?? null, limit: packLimit(p) }))}

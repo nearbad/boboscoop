@@ -1,11 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { BoxBuilder } from "@/components/box-builder";
+import { RecentWins, TopPrizes } from "@/components/capsule-showcase";
+import { GachaMachine } from "@/components/gacha-machine";
 import { PackCard } from "@/components/pack-card";
 import { ReviewWall } from "@/components/review-wall";
 import { SectionTitle } from "@/components/section-title";
 import { SiteFooter, SocialLinks } from "@/components/site-footer";
 import { SiteHeader } from "@/components/header";
+import { capsuleSpoonsPhrase } from "@/lib/capsule";
+import { getCapsuleShowcase } from "@/lib/capsules";
 import { getLandingData } from "@/lib/catalog";
 import { formatRub, spoonsLabel } from "@/lib/pricing";
 
@@ -15,6 +19,8 @@ export default async function Home() {
   const { settings, products, reviews, faq, delivery, packs } = await getLandingData();
   const available = products.filter((p) => p.available);
   const minPrice = Math.min(...settings.tiers.map((t) => t.price));
+  const capsule = await getCapsuleShowcase(settings);
+  const maxTier = Math.max(...settings.tiers.map((t) => t.spoons));
 
   return (
     // Bottom padding on phones leaves room for the builder's fixed price bar.
@@ -49,6 +55,7 @@ export default async function Home() {
                 {settings.tiers.map((t) => (
                   <li key={t.spoons} className="rounded-full bg-white px-3 py-1.5 ring-2 ring-line">
                     {"🥄".repeat(t.spoons)} {spoonsLabel(t.spoons)} · {formatRub(t.price)}
+                    {capsule.minSpoons !== null && t.spoons >= capsule.minSpoons && " + 🎁"}
                   </li>
                 ))}
               </ul>
@@ -92,6 +99,44 @@ export default async function Home() {
           </ol>
         </section>
 
+        {/* Капсула Боботика */}
+        {capsule.minSpoons !== null && (
+          <section className="mx-auto max-w-6xl px-4 pb-16">
+            <div className="grid items-center gap-8 rounded-[2.5rem] border-2 border-ink bg-teal-mist p-6 shadow-pop sm:p-10 md:grid-cols-[280px_1fr]">
+              <GachaMachine idle />
+              <div>
+                <p className="text-sm font-extrabold uppercase tracking-widest text-pink-deep">Подарок к боксу</p>
+                <h2 className="mt-1 text-3xl font-black leading-tight sm:text-4xl">Капсула Боботика 🎁</h2>
+                <p className="mt-3 text-lg leading-relaxed text-ink-soft">
+                  К каждому боксу {capsuleSpoonsPhrase(capsule.minSpoons, maxTier)} — капсула с призом. Пустых капсул не бывает:
+                  внутри может оказаться что угодно, от стикеров до супер-приза! Откроете её сразу после оплаты, а приз приедет
+                  в той же посылке.
+                </p>
+                <div className="mt-5">
+                  <TopPrizes prizes={capsule.prizes} />
+                </div>
+                <div className="mt-6 flex flex-wrap items-center gap-4">
+                  <a
+                    href="#builder"
+                    className="rounded-full border-2 border-ink bg-pink-deep px-6 py-3 font-black text-white shadow-pop transition active:translate-y-1 active:shadow-none"
+                  >
+                    Собрать бокс {capsuleSpoonsPhrase(capsule.minSpoons, maxTier)}
+                  </a>
+                  <Link href="/capsule" className="font-bold text-teal-deep underline underline-offset-2">
+                    Все призы и шансы →
+                  </Link>
+                </div>
+                {capsule.wins.length > 0 && (
+                  <div className="mt-6">
+                    <p className="mb-2 text-sm font-extrabold">Недавно выпало:</p>
+                    <RecentWins wins={capsule.wins.slice(0, 3)} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Builder */}
         <section id="builder" className="bg-pink-soft/50 py-16">
           <div className="mx-auto max-w-6xl px-4">
@@ -105,6 +150,7 @@ export default async function Home() {
               maxBoxes={settings.maxBoxes}
               acceptingOrders={settings.acceptingOrders}
               closedMessage={settings.closedMessage}
+              capsuleMinSpoons={capsule.minSpoons}
               wishOptions={{
                 characters: settings.characters,
                 colors: settings.colors,

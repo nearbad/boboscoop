@@ -6,11 +6,14 @@ import { ORDER_STATUSES } from "@/lib/db/schema";
 import { getOrder, STATUS_LABELS, syncPayment } from "@/lib/orders";
 import { formatRub, spoonsLabel } from "@/lib/pricing";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { RarityPill } from "@/components/capsule-opener";
+import { getOrderCapsules } from "@/lib/capsules";
 
 export default async function AdminOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const found = await getOrder((await params).id);
   if (!found) notFound();
   const order = await syncPayment(found);
+  const capsules = await getOrderCapsules(order.id);
   const fmt = (d: Date | null) => d?.toLocaleString("ru-RU", { timeZone: "Europe/Moscow" }) ?? "—";
   const tg = order.telegram.replace(/^@/, "");
 
@@ -38,6 +41,27 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
               </dl>
             </Card>
           ))}
+          {order.boxes.some((b) => b.capsule) && (
+            <Card title="🎰 Капсулы Боботика: положите в посылку">
+              {capsules.length > 0 ? (
+                <ul className="space-y-2 text-sm">
+                  {capsules.map((c) => (
+                    <li key={c.id} className="flex flex-wrap items-center gap-2">
+                      <span className="font-bold text-ink-soft">Бокс {c.boxIndex + 1}:</span>
+                      <span className="text-lg">{c.prizeEmoji}</span>
+                      <span className="font-extrabold">{c.prizeName}</span>
+                      <RarityPill rarity={c.rarity} />
+                      <span className="text-xs text-ink-soft">{c.openedAt ? "покупатель открыл" : "ещё не открыта"}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-ink-soft">
+                  {order.status === "pending_payment" ? "Приз разыграется после оплаты." : "Капсула не выдана: в призовом фонде ничего не осталось."}
+                </p>
+              )}
+            </Card>
+          )}
           {order.packs.length > 0 && (
             <Card title="Готовые боксы">
               <ul className="space-y-1 text-sm">

@@ -67,7 +67,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                   </td>
                   <td className="p-3">
                     {[
-                      ...o.boxes.map((b) => `${spoonsLabel(b.spoons)}${b.video ? " 🎥" : ""}`),
+                      ...o.boxes.map((b) => `${spoonsLabel(b.spoons)}${b.video ? " 🎥" : ""}${b.capsule ? " 🎰" : ""}`),
                       ...o.packs.map((p) => `🎁 ${p.title}${p.qty > 1 ? ` × ${p.qty}` : ""}`),
                     ].join(", ")}
                   </td>

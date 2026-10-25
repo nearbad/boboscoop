@@ -73,11 +73,28 @@ export const seedFaq = [
     sort: 3,
   },
   {
+    question: "Что такое Капсула Боботика?",
+    answer:
+      "Это подарок к каждому боксу на 3 ложки. После оплаты на странице заказа вы откроете капсулу и узнаете, какой приз положим в посылку. Пустых капсул не бывает! Шансы всех призов есть на странице «Капсула».",
+    sort: 5,
+  },
+  {
     question: "Зачем платить за видео?",
     answer:
       "На каждый ролик уходит от 1,5 до 3 часов. Если мне понравится ваш бокс и захочется его снять, сниму бесплатно!",
     sort: 4,
   },
+];
+
+// Example prize pool for "Капсула Боботика" (weights add up to 100, so weight = chance in %).
+// Costs are rough guesses for the budget estimate in the admin panel.
+export const seedCapsulePrizes = [
+  { name: "Мини-набор стикеров", emoji: "🌸", rarity: "common" as const, weight: 40, cost: 60, sort: 0 },
+  { name: "Брелок", emoji: "🔑", rarity: "common" as const, weight: 30, cost: 100, sort: 1 },
+  { name: "Плюшевая игрушка", emoji: "🧸", rarity: "rare" as const, weight: 15, cost: 350, sort: 2 },
+  { name: "Бонусная ½ ложки", emoji: "🥄", rarity: "rare" as const, weight: 7, cost: 400, sort: 3, description: "Доложим в ваш бокс ещё полложки сюрпризов" },
+  { name: "Фигурка", emoji: "🐰", rarity: "epic" as const, weight: 7, cost: 400, sort: 4 },
+  { name: "Большая плюшевая игрушка", emoji: "🎀", rarity: "super" as const, weight: 1, cost: 1500, stock: 1, sort: 5 },
 ];
 
 // Placeholder reviews, hidden until replaced with real ones in the admin panel.

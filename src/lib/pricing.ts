@@ -16,7 +16,8 @@ export type Box = {
   wishes: Wishes;
 };
 
-export type OrderBox = Box & { price: number };
+// capsule: the box earned a "Капсула Боботика" when the order was placed.
+export type OrderBox = Box & { price: number; capsule?: boolean };
 
 export type OrderPack = { packId: number; title: string; price: number; qty: number };
 

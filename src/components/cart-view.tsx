@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useCart, type CartBox } from "@/components/cart-context";
 import { WishesEditor, type WishOptions } from "@/components/wishes-editor";
+import { capsulesLabel } from "@/lib/capsule";
 import { boxPrice, boxesLabel, cartSubtotal, formatRub, spoonsLabel, type PricingSettings } from "@/lib/pricing";
 
 type Method = { id: number; name: string; price: number; note: string };
@@ -55,11 +56,13 @@ function BoxCard({
   index,
   pricing,
   wishOptions,
+  capsuleMinSpoons,
 }: {
   box: CartBox;
   index: number;
   pricing: PricingSettings;
   wishOptions: WishOptions;
+  capsuleMinSpoons: number | null;
 }) {
   const { update, remove } = useCart();
   const [editing, setEditing] = useState(false);
@@ -87,6 +90,14 @@ function BoxCard({
       {price === null && (
         <p className="mt-2 text-sm font-bold text-pink-deep">Такого варианта больше нет, выберите количество ложек заново</p>
       )}
+      {capsuleMinSpoons !== null &&
+        (box.spoons >= capsuleMinSpoons ? (
+          <p className="mt-2 inline-block rounded-full bg-pink-soft px-3 py-1 text-xs font-extrabold text-pink-deep">🎁 + Капсула Боботика с призом</p>
+        ) : (
+          <p className="mt-2 text-xs font-bold text-ink-soft">
+            🎁 Выберите {spoonsLabel(capsuleMinSpoons)}, чтобы получить Капсулу Боботика с призом
+          </p>
+        ))}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <label className="sr-only" htmlFor={`spoons-${box.id}`}>Количество ложек</label>
@@ -154,7 +165,9 @@ export function CartView({
   zones,
   packs,
   wishOptions,
+  capsuleMinSpoons,
 }: {
+  capsuleMinSpoons: number | null;
   packs: PackInfo[];
   pricing: PricingSettings;
   acceptingOrders: boolean;
@@ -194,6 +207,7 @@ export function CartView({
   const packLines = cart.packs.map((l) => ({ ...l, pack: packs.find((p) => p.id === l.packId) }));
   const subtotal = cartSubtotal(pricing, cart.boxes) + packLines.reduce((s, l) => s + (l.pack?.price ?? 0) * l.qty, 0);
   const invalidPack = packLines.some((l) => !l.pack || l.qty > l.pack.limit);
+  const capsuleCount = capsuleMinSpoons === null ? 0 : cart.boxes.filter((b) => b.spoons >= capsuleMinSpoons).length;
   const delivery = method ? method.price + (zone?.extra ?? 0) : 0;
   const overLimit = cart.boxes.length > pricing.maxBoxes;
   const invalidBox = cart.boxes.some((b) => boxPrice(pricing, b) === null);
@@ -260,7 +274,7 @@ export function CartView({
             </div>
             <ul className="space-y-4">
               {cart.boxes.map((b, i) => (
-                <BoxCard key={b.id} box={b} index={i} pricing={pricing} wishOptions={wishOptions} />
+                <BoxCard key={b.id} box={b} index={i} pricing={pricing} wishOptions={wishOptions} capsuleMinSpoons={capsuleMinSpoons} />
               ))}
             </ul>
             {overLimit && (
@@ -376,6 +390,12 @@ export function CartView({
                 <dd className="font-bold">{formatRub(l.pack.price * l.qty)}</dd>
               </div>
             ) : null,
+          )}
+          {capsuleCount > 0 && (
+            <div className="flex justify-between gap-3">
+              <dt className="text-ink-soft">🎁 {capsulesLabel(capsuleCount)} Боботика</dt>
+              <dd className="font-bold text-pink-deep">в подарок</dd>
+            </div>
           )}
           <div className="flex justify-between gap-3">
             <dt className="text-ink-soft">Доставка{method ? `, ${method.name}` : ""}</dt>

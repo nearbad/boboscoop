@@ -2,7 +2,9 @@ import "server-only";
 import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/lib/db";
-import type { Order, OrderStatus } from "@/lib/db/schema";
+import { RARITY } from "@/lib/capsule";
+import { capsuleMinSpoons, drawCapsules } from "@/lib/capsules";
+import type { Capsule, Order, OrderStatus } from "@/lib/db/schema";
 import { boxPrice, formatRub, spoonsLabel, type OrderBox, type OrderPack } from "@/lib/pricing";
 import { getSettings } from "@/lib/settings";
 import { escapeHtml, sendTelegram } from "@/lib/telegram";
@@ -60,6 +62,7 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     exclude: new Set(products.map((p) => p.name)),
   };
 
+  const capsuleFrom = await capsuleMinSpoons(settings);
   const boxes: OrderBox[] = input.boxes.map((b) => {
     const price = boxPrice(settings, b);
     if (price === null) throw new CheckoutError("Такого количества ложек нет, обновите корзину");
@@ -67,6 +70,7 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
       spoons: b.spoons,
       video: b.video,
       price,
+      capsule: capsuleFrom !== null && b.spoons >= capsuleFrom,
       wishes: {
         characters: b.wishes.characters.filter((c) => known.characters.has(c)),
         colors: b.wishes.colors.filter((c) => known.colors.has(c)),
@@ -133,6 +137,12 @@ async function resolvePacks(lines: CheckoutInput["packs"]): Promise<OrderPack[]>
   });
 }
 
+function capsuleLine(earned: boolean | undefined, capsule: Capsule | undefined) {
+  if (capsule) return `  🎰 Капсула: ${capsule.prizeEmoji} ${escapeHtml(capsule.prizeName)} (${RARITY[capsule.rarity].short})`;
+  if (earned) return "  ⚠️ Капсула не выдана: в призовом фонде ничего не осталось";
+  return "";
+}
+
 function siteUrl() {
   return (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 }
@@ -174,22 +184,27 @@ export async function getOrder(id: string): Promise<Order | undefined> {
   return db.query.orders.findFirst({ where: eq(schema.orders.id, id) });
 }
 
-// Moves a pending order to "paid" exactly once and notifies the shop owner.
+// Moves a pending order to "paid" exactly once, reserves stock, draws capsule prizes
+// and notifies the shop owner. The status check makes concurrent calls (webhook + return page) safe.
 export async function markPaid(orderId: string, paymentId: string | null): Promise<void> {
-  const [order] = await db
-    .update(schema.orders)
-    .set({ status: "paid", paidAt: new Date(), ...(paymentId ? { paymentId } : {}) })
-    .where(and(eq(schema.orders.id, orderId), eq(schema.orders.status, "pending_payment")))
-    .returning();
-  if (!order) return;
-  // Stock is reserved only once the order is paid.
-  for (const p of order.packs) {
-    await db
-      .update(schema.packs)
-      .set({ stock: sql`greatest(${schema.packs.stock} - ${p.qty}, 0)` })
-      .where(and(eq(schema.packs.id, p.packId), isNotNull(schema.packs.stock)));
-  }
-  await notifyPaid(order);
+  const result = await db.transaction(async (tx) => {
+    const [order] = await tx
+      .update(schema.orders)
+      .set({ status: "paid", paidAt: new Date(), ...(paymentId ? { paymentId } : {}) })
+      .where(and(eq(schema.orders.id, orderId), eq(schema.orders.status, "pending_payment")))
+      .returning();
+    if (!order) return null;
+    // Stock is reserved only once the order is paid.
+    for (const p of order.packs) {
+      await tx
+        .update(schema.packs)
+        .set({ stock: sql`greatest(${schema.packs.stock} - ${p.qty}, 0)` })
+        .where(and(eq(schema.packs.id, p.packId), isNotNull(schema.packs.stock)));
+    }
+    const capsules = await drawCapsules(tx, order);
+    return { order, capsules };
+  });
+  if (result) await notifyPaid(result.order, result.capsules);
 }
 
 // Checks the payment status with YooKassa (used on the return page and by the webhook).
@@ -207,7 +222,7 @@ export async function syncPayment(order: Order): Promise<Order> {
   return order;
 }
 
-async function notifyPaid(order: Order) {
+async function notifyPaid(order: Order, capsules: Capsule[]) {
   const e = escapeHtml;
   const lines = [
     `🎀 <b>Новый оплаченный заказ №${order.number}</b>`,
@@ -220,6 +235,7 @@ async function notifyPaid(order: Order) {
         w.colors.length ? `  🎨 Цвета: ${e(w.colors.join(", "))}` : "",
         w.exclude.length ? `  🚫 Не класть: ${e(w.exclude.join(", "))}` : "",
         w.comment ? `  📝 ${e(w.comment)}` : "",
+        capsuleLine(b.capsule, capsules.find((c) => c.boxIndex === i)),
       ].filter(Boolean);
     }),
     ...order.packs.map((p) => `<b>Готовый бокс:</b> ${e(p.title)} × ${p.qty} — ${formatRub(p.price * p.qty)}`),

@@ -1,4 +1,5 @@
-import { boolean, integer, jsonb, pgTable, serial, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import type { Rarity } from "@/lib/capsule";
 import type { OrderBox, OrderPack } from "@/lib/pricing";
 
 // Single-row table holding the shop settings as JSON (see src/lib/settings.ts).
@@ -104,6 +105,46 @@ export const orders = pgTable("orders", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Prize pool of "Капсула Боботика".
+export const capsulePrizes = pgTable("capsule_prizes", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  emoji: text("emoji").notNull().default("🎁"),
+  imageUrl: text("image_url"),
+  rarity: text("rarity").$type<Rarity>().notNull().default("common"),
+  // Chance = weight / sum of weights of all drawable prizes.
+  weight: integer("weight").notNull().default(10),
+  // null = unlimited
+  stock: integer("stock"),
+  // Cost price for the admin's budget estimate; never shown to customers.
+  cost: integer("cost").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  sort: integer("sort").notNull().default(0),
+});
+
+// One capsule per eligible box of a paid order. The prize is drawn at payment time and copied
+// here, so later edits to the prize pool don't change what the customer has won.
+export const capsules = pgTable(
+  "capsules",
+  {
+    id: serial("id").primaryKey(),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    boxIndex: integer("box_index").notNull(),
+    prizeId: integer("prize_id"),
+    prizeName: text("prize_name").notNull(),
+    prizeDescription: text("prize_description").notNull().default(""),
+    prizeEmoji: text("prize_emoji").notNull(),
+    prizeImageUrl: text("prize_image_url"),
+    rarity: text("rarity").$type<Rarity>().notNull(),
+    openedAt: timestamp("opened_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("capsules_order_box_idx").on(t.orderId, t.boxIndex)],
+);
+
 export type Product = typeof products.$inferSelect;
 export type DeliveryMethod = typeof deliveryMethods.$inferSelect;
 export type DeliveryZone = typeof deliveryZones.$inferSelect;
@@ -111,3 +152,5 @@ export type Pack = typeof packs.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
 export type FaqItem = typeof faq.$inferSelect;
 export type Order = typeof orders.$inferSelect;
+export type CapsulePrize = typeof capsulePrizes.$inferSelect;
+export type Capsule = typeof capsules.$inferSelect;
